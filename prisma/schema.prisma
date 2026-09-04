@@ -1,0 +1,219 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  USER
+}
+
+enum AssetStatus {
+  IN_USE
+  AVAILABLE
+  RESERVE
+  MAINTENANCE
+  AWAITING_INSTALL
+  DISPOSED
+  INACTIVE
+}
+
+enum AssetKind {
+  COMPUTER
+  MONITOR
+}
+
+model User {
+  id            String          @id @default(cuid())
+  email         String          @unique
+  passwordHash  String          @map("password_hash")
+  fullName      String          @map("full_name")
+  role          Role            @default(USER)
+  createdDate   DateTime        @default(now()) @map("created_date")
+  updatedDate   DateTime        @updatedAt @map("updated_date")
+  movimentacoes Movimentacao[]
+
+  @@map("users")
+}
+
+model Departamento {
+  id            String         @id @default(cuid())
+  codigo        String         @unique
+  nome          String
+  qtdServidores Int            @default(0) @map("qtd_servidores")
+  nivel         Int            @default(1)
+  parentId      String?        @map("parent_id")
+  parent        Departamento?  @relation("DepartamentoTree", fields: [parentId], references: [id])
+  children      Departamento[] @relation("DepartamentoTree")
+  sortOrder     Int            @default(0) @map("sort_order")
+  createdDate   DateTime       @default(now()) @map("created_date")
+  updatedDate   DateTime       @updatedAt @map("updated_date")
+  alocacoes     Alocacao[]
+  computadores  Computador[]
+  monitores     Monitor[]
+  servidores    Servidor[]
+
+  @@index([parentId])
+  @@index([sortOrder])
+  @@map("departamentos")
+}
+
+model Servidor {
+  id             String        @id @default(cuid())
+  nome           String
+  email          String?
+  matricula      String?       @unique
+  cargo          String?
+  ativo          Boolean       @default(true)
+  departamentoId String        @map("departamento_id")
+  departamento   Departamento  @relation(fields: [departamentoId], references: [id])
+  createdDate    DateTime      @default(now()) @map("created_date")
+  updatedDate    DateTime      @updatedAt @map("updated_date")
+  computadores   Computador[]
+  monitores      Monitor[]
+
+  @@index([departamentoId])
+  @@index([nome])
+  @@map("servidores")
+}
+
+model Localizacao {
+  id           String       @id @default(cuid())
+  nome         String
+  predio       String?
+  andar        String?
+  sala         String?
+  createdDate  DateTime     @default(now()) @map("created_date")
+  updatedDate  DateTime     @updatedAt @map("updated_date")
+  computadores Computador[]
+  monitores    Monitor[]
+
+  @@map("localizacoes")
+}
+
+model Computador {
+  id                  String          @id @default(cuid())
+  hostname            String?
+  tombo               String          @unique
+  serialNumber        String?         @unique @map("serial_number")
+  fabricante          String?
+  modelo              String?
+  status              AssetStatus     @default(AVAILABLE)
+  processador         String?
+  memoriaRam          String?         @map("memoria_ram")
+  armazenamento       String?
+  sistemaOperacional  String?         @map("sistema_operacional")
+  soVersao            String?         @map("so_versao")
+  arquitetura         String?
+  observacoes         String?
+  usuario             String?
+  servidorId          String?         @map("servidor_id")
+  servidor            Servidor?       @relation(fields: [servidorId], references: [id])
+  departamentoId      String?         @map("departamento_id")
+  departamento        Departamento?   @relation(fields: [departamentoId], references: [id])
+  localizacaoId       String?         @map("localizacao_id")
+  localizacao         Localizacao?    @relation(fields: [localizacaoId], references: [id])
+  createdDate         DateTime        @default(now()) @map("created_date")
+  updatedDate         DateTime        @updatedAt @map("updated_date")
+  deletedAt           DateTime?       @map("deleted_at")
+  alocacao            Alocacao?
+  monitores           Monitor[]
+  movimentacoes       Movimentacao[]
+
+  @@index([modelo])
+  @@index([status])
+  @@index([departamentoId])
+  @@index([localizacaoId])
+  @@index([servidorId])
+  @@index([hostname])
+  @@index([fabricante])
+  @@map("computadores")
+}
+
+model Monitor {
+  id              String          @id @default(cuid())
+  tombo           String          @unique
+  serialNumber    String?         @unique @map("serial_number")
+  fabricante      String?
+  modelo          String?
+  tamanho         String?
+  resolucao       String?
+  conexoes        String?
+  status          AssetStatus     @default(AVAILABLE)
+  observacoes     String?
+  usuario         String?
+  servidorId      String?         @map("servidor_id")
+  servidor        Servidor?       @relation(fields: [servidorId], references: [id])
+  departamentoId  String?         @map("departamento_id")
+  departamento    Departamento?   @relation(fields: [departamentoId], references: [id])
+  localizacaoId   String?         @map("localizacao_id")
+  localizacao     Localizacao?    @relation(fields: [localizacaoId], references: [id])
+  computadorId    String?         @map("computador_id")
+  computador      Computador?     @relation(fields: [computadorId], references: [id])
+  createdDate     DateTime        @default(now()) @map("created_date")
+  updatedDate     DateTime        @updatedAt @map("updated_date")
+  deletedAt       DateTime?       @map("deleted_at")
+  alocacaoMonitor AlocacaoMonitor?
+  movimentacoes   Movimentacao[]
+
+  @@index([modelo])
+  @@index([status])
+  @@index([departamentoId])
+  @@index([computadorId])
+  @@index([servidorId])
+  @@index([fabricante])
+  @@map("monitores")
+}
+
+model Movimentacao {
+  id            String      @id @default(cuid())
+  kind          AssetKind
+  campo         String
+  valorAnterior String?     @map("valor_anterior")
+  valorNovo     String?     @map("valor_novo")
+  createdDate   DateTime    @default(now()) @map("created_date")
+  actorId       String?     @map("actor_id")
+  actor         User?       @relation(fields: [actorId], references: [id])
+  computadorId  String?     @map("computador_id")
+  computador    Computador? @relation(fields: [computadorId], references: [id])
+  monitorId     String?     @map("monitor_id")
+  monitor       Monitor?    @relation(fields: [monitorId], references: [id])
+
+  @@index([createdDate])
+  @@index([computadorId])
+  @@index([monitorId])
+  @@map("movimentacoes")
+}
+
+/// Registro legado de alocação — preservado para não perder dados.
+/// A aplicação usa os campos diretos em Computador e Monitor.
+model Alocacao {
+  id             String            @id @default(cuid())
+  departamentoId String            @map("departamento_id")
+  departamento   Departamento      @relation(fields: [departamentoId], references: [id])
+  computadorId   String?           @unique @map("computador_id")
+  computador     Computador?       @relation(fields: [computadorId], references: [id])
+  monitores      AlocacaoMonitor[]
+  usuario        String?
+  createdDate    DateTime          @default(now()) @map("created_date")
+  updatedDate    DateTime          @updatedAt @map("updated_date")
+
+  @@index([departamentoId])
+  @@map("alocacoes")
+}
+
+model AlocacaoMonitor {
+  id         String    @id @default(cuid())
+  alocacaoId String    @map("alocacao_id")
+  alocacao   Alocacao  @relation(fields: [alocacaoId], references: [id], onDelete: Cascade)
+  monitorId  String    @unique @map("monitor_id")
+  monitor    Monitor   @relation(fields: [monitorId], references: [id])
+  ordem      Int
+
+  @@unique([alocacaoId, ordem])
+  @@map("alocacao_monitores")
+}
