@@ -33,7 +33,6 @@ export function UsuariosManager({
   const [dept, setDept] = useState("");
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Person | null>(null);
-  const [error, setError] = useState("");
 
   const filtered = useMemo(() => {
     const term = q.toLowerCase();
@@ -108,8 +107,7 @@ export function UsuariosManager({
                         Editar
                       </Button>
                       <Button type="button" variant="ghost" onClick={async () => {
-                        const res = await deleteServidor(person.id);
-                        if (res.error) setError(res.error);
+                        await deleteServidor(person.id);
                       }}>
                         Excluir
                       </Button>
@@ -122,7 +120,6 @@ export function UsuariosManager({
         </table>
         {!filtered.length ? <EmptyState title="Nenhum usuário encontrado" description="Cadastre pessoas e associe-as a um setor." /> : null}
       </div>
-      {error ? <p className="mt-3 text-sm text-rose-700">{error}</p> : null}
       <p className="mt-3 text-xs text-slate-500">{filtered.length} de {people.length} usuários</p>
 
       <Dialog title={editing ? "Editar usuário" : "Novo usuário"} open={open} onClose={() => setOpen(false)}>

@@ -79,7 +79,7 @@ export default async function RelatoriosPage({
                 <td className="px-4 py-3"><StatusBadge status={item.status} /></td>
               </tr>
             ))}
-            {showMonitors ? monitors.filter((m) => tipo !== "sem-monitor").map((item) => (
+            {showMonitors ? monitors.map((item) => (
               <tr key={`m-${item.id}`} className="border-b border-line">
                 <td className="px-4 py-3">Monitor</td>
                 <td className="px-4 py-3 font-medium">

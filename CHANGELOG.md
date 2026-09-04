@@ -4,7 +4,7 @@ O versionamento segue o padrão `X.Y.Z (Build N)`.
 Alterações pequenas, correções e ajustes mantêm a mesma versão e incrementam apenas o Build.
 `X.Y.Z` muda somente quando houver mudança funcional relevante ou significativa.
 
-## 1.0.0 (Build 2)
+## 1.0.0 (Build 3)
 
 Lançamento inicial do inventário de computadores e monitores do CAU.
 
@@ -27,3 +27,8 @@ Lançamento inicial do inventário de computadores e monitores do CAU.
 
 - Redesign da tela de login com identidade visual do CAU, layout responsivo e painel de contexto institucional
 - Melhorias de usabilidade no acesso, incluindo mostrar/ocultar senha, indicação de Caps Lock, estado de autenticação e mensagens de erro mais claras
+
+### Corrigido
+
+- Acesso pela rede local via IP do servidor, que redirecionava o navegador para localhost por causa da URL fixa do Auth.js
+- Erros de TypeScript que impediam o build do Next.js nos relatórios e na exclusão de usuários

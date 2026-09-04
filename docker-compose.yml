@@ -31,7 +31,7 @@ services:
       DATABASE_URL: postgresql://cau_user:cau_password_dev@db:5432/cau_inventory
       NODE_TLS_REJECT_UNAUTHORIZED: "0"
       AUTH_SECRET: "cau-inventory-dev-secret-change-in-production"
-      NEXTAUTH_URL: "http://localhost:3000"
+      AUTH_TRUST_HOST: "true"
     command: sh -c "npm install && npx prisma generate && npx prisma db push && npx prisma db seed && npm run dev"
     ports:
       - "3000:3000"
