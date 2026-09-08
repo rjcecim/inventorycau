@@ -3,8 +3,9 @@
 O versionamento segue o padrão `X.Y.Z (Build N)`.
 Alterações pequenas, correções e ajustes mantêm a mesma versão e incrementam apenas o Build.
 `X.Y.Z` muda somente quando houver mudança funcional relevante ou significativa.
+O número do Build é sequencial e não reinicia quando `X.Y.Z` avança.
 
-## 1.1.0 (Build 1)
+## 1.1.0 (Build 4)
 
 Cadastro de prédios do órgão, com cidade e UF, e associação de equipamentos a setor e prédio.
 
