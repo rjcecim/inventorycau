@@ -6,8 +6,9 @@ import { saveComputador } from "@/app/actions/computadores";
 import { Button } from "@/components/ui/Button";
 import { Field, SelectInput, TextArea, TextInput } from "@/components/ui/Field";
 import { STATUS_ORDER, statusLabel } from "@/lib/status";
+import { formatPredio } from "@/lib/predios";
 
-type Option = { id: string; nome: string; codigo?: string };
+type Option = { id: string; nome: string; codigo?: string; cidade?: string | null; uf?: string | null };
 type PersonOption = { id: string; nome: string; departamentoCodigo: string; departamentoNome: string };
 
 export function ComputerForm({
@@ -100,10 +101,12 @@ export function ComputerForm({
             ))}
           </SelectInput>
         </Field>
-        <Field label="Localização">
+        <Field label="Prédio">
           <SelectInput name="localizacaoId" defaultValue={computer?.localizacaoId ?? ""}>
             <option value="">Não informado</option>
-            {locations.map((item) => <option key={item.id} value={item.id}>{item.nome}</option>)}
+            {locations.map((item) => (
+              <option key={item.id} value={item.id}>{formatPredio(item)}</option>
+            ))}
           </SelectInput>
         </Field>
       </div>

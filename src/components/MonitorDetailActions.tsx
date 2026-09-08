@@ -35,7 +35,7 @@ export function MonitorDetailActions({
 }: {
   monitor: Monitor;
   departments: { id: string; nome: string; codigo?: string }[];
-  locations: { id: string; nome: string }[];
+  locations: { id: string; nome: string; cidade?: string | null; uf?: string | null }[];
   computers: { id: string; tombo: string; hostname: string | null }[];
   people?: { id: string; nome: string; departamentoCodigo: string; departamentoNome: string }[];
 }) {

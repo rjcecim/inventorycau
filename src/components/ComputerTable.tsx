@@ -11,6 +11,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { TextInput, SelectInput } from "@/components/ui/Field";
 import { STATUS_ORDER, statusLabel } from "@/lib/status";
+import { formatPredio } from "@/lib/predios";
 
 type Row = {
   id: string;
@@ -22,7 +23,7 @@ type Row = {
   status: AssetStatus;
   usuario: string | null;
   departamento: { id: string; nome: string; codigo?: string } | null;
-  localizacao: { nome: string } | null;
+  localizacao: { id: string; nome: string; cidade: string; uf: string | null } | null;
   _count: { monitores: number };
 };
 
@@ -35,7 +36,7 @@ export function ComputerTable({
 }: {
   computers: Row[];
   departments: { id: string; nome: string; codigo?: string }[];
-  locations: { id: string; nome: string }[];
+  locations: { id: string; nome: string; cidade?: string | null; uf?: string | null }[];
   people?: { id: string; nome: string; departamentoCodigo: string; departamentoNome: string }[];
   isAdmin: boolean;
 }) {
@@ -43,6 +44,7 @@ export function ComputerTable({
   const [q, setQ] = useState("");
   const [status, setStatus] = useState("");
   const [dept, setDept] = useState("");
+  const [predio, setPredio] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
 
   const filtered = useMemo(() => {
@@ -55,9 +57,10 @@ export function ComputerTable({
       if (term && !hay.includes(term)) return false;
       if (status && row.status !== status) return false;
       if (dept && row.departamento?.id !== dept) return false;
+      if (predio && row.localizacao?.id !== predio) return false;
       return true;
     });
-  }, [computers, q, status, dept]);
+  }, [computers, q, status, dept, predio]);
 
   return (
     <>
@@ -76,8 +79,14 @@ export function ComputerTable({
               </option>
             ))}
           </SelectInput>
-          {(q || status || dept) ? (
-            <Button variant="ghost" type="button" onClick={() => { setQ(""); setStatus(""); setDept(""); }}>
+          <SelectInput value={predio} onChange={(e) => setPredio(e.target.value)} className="max-w-72">
+            <option value="">Todos os prédios</option>
+            {locations.map((item) => (
+              <option key={item.id} value={item.id}>{formatPredio(item)}</option>
+            ))}
+          </SelectInput>
+          {(q || status || dept || predio) ? (
+            <Button variant="ghost" type="button" onClick={() => { setQ(""); setStatus(""); setDept(""); setPredio(""); }}>
               Limpar
             </Button>
           ) : null}
@@ -97,6 +106,7 @@ export function ComputerTable({
               <th className="px-4 py-3">Modelo</th>
               <th className="px-4 py-3">Usuário</th>
               <th className="px-4 py-3">Setor</th>
+              <th className="px-4 py-3">Prédio</th>
               <th className="px-4 py-3">Status</th>
               <th className="px-4 py-3">Monitores</th>
             </tr>
@@ -117,6 +127,7 @@ export function ComputerTable({
                     ? `${row.departamento.codigo ? `${row.departamento.codigo}. ` : ""}${row.departamento.nome}`
                     : "—"}
                 </td>
+                <td className="px-4 py-3 text-slate-600">{formatPredio(row.localizacao) || "—"}</td>
                 <td className="px-4 py-3"><StatusBadge status={row.status} /></td>
                 <td className="px-4 py-3 text-slate-600">{row._count.monitores}</td>
               </tr>

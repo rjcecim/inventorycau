@@ -79,15 +79,15 @@ async function main() {
   const apoioUsuarioId = setores.get("9.2.5");
 
   const locationNames = [
-    { id: "sede-geral", nome: "Sede — Belém", predio: "Sede", andar: null, sala: null },
-    { id: "estoque", nome: "Estoque / Reserva", predio: "Sede", andar: "Térreo", sala: "Depósito" },
-    { id: "santarem", nome: "Unidade Regional — Santarém", predio: "URR Santarém", andar: null, sala: null },
-    { id: "maraba", nome: "Unidade Regional — Marabá", predio: "URR Marabá", andar: null, sala: null },
+    { id: "sede-geral", nome: "Sede", cidade: "Belém", uf: "PA", predio: "Sede", andar: null, sala: null },
+    { id: "estoque", nome: "Estoque / Reserva", cidade: "Belém", uf: "PA", predio: "Sede", andar: "Térreo", sala: "Depósito" },
+    { id: "santarem", nome: "Unidade Regional", cidade: "Santarém", uf: "PA", predio: "URR Santarém", andar: null, sala: null },
+    { id: "maraba", nome: "Unidade Regional", cidade: "Marabá", uf: "PA", predio: "URR Marabá", andar: null, sala: null },
   ];
   for (const loc of locationNames) {
     await prisma.localizacao.upsert({
       where: { id: loc.id },
-      update: { nome: loc.nome, predio: loc.predio, andar: loc.andar, sala: loc.sala },
+      update: { nome: loc.nome, cidade: loc.cidade, uf: loc.uf, predio: loc.predio, andar: loc.andar, sala: loc.sala },
       create: loc,
     });
   }

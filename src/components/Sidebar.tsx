@@ -33,7 +33,7 @@ const groups = [
     items: [
       { href: "/departamentos", icon: Building2, label: "Setores" },
       { href: "/usuarios", icon: Users, label: "Usuários" },
-      { href: "/localizacoes", icon: MapPin, label: "Localizações" },
+      { href: "/localizacoes", icon: MapPin, label: "Prédios" },
     ],
   },
   {

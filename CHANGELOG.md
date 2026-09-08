@@ -4,6 +4,21 @@ O versionamento segue o padrão `X.Y.Z (Build N)`.
 Alterações pequenas, correções e ajustes mantêm a mesma versão e incrementam apenas o Build.
 `X.Y.Z` muda somente quando houver mudança funcional relevante ou significativa.
 
+## 1.1.0 (Build 1)
+
+Cadastro de prédios do órgão, com cidade e UF, e associação de equipamentos a setor e prédio.
+
+### Adicionado
+
+- Cadastro de prédios com nome, cidade e UF, permitindo o mesmo tipo de unidade em cidades diferentes
+- Listagem de prédios agrupada por cidade, com contagem de computadores e monitores
+- Filtro por prédio na lista de computadores
+
+### Alterado
+
+- Localizações físicas (prédio, andar e sala) passam a ser o catálogo de prédios do órgão
+- Formulários de computador e monitor, detalhes, dashboard e auditoria passam a tratar a localização como prédio
+
 ## 1.0.0 (Build 3)
 
 Lançamento inicial do inventário de computadores e monitores do CAU.

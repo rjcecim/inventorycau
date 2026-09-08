@@ -6,6 +6,7 @@ import { isAdminRole } from "@/lib/authz";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { MovementTimeline } from "@/components/MovementTimeline";
 import { MonitorDetailActions } from "@/components/MonitorDetailActions";
+import { formatPredio } from "@/lib/predios";
 
 export const dynamic = "force-dynamic";
 
@@ -34,7 +35,7 @@ export default async function MonitorDetailPage({ params }: { params: Promise<{ 
 
   const [departments, locations, computers, people] = await Promise.all([
     prisma.departamento.findMany({ orderBy: { sortOrder: "asc" } }),
-    prisma.localizacao.findMany({ orderBy: { nome: "asc" } }),
+    prisma.localizacao.findMany({ orderBy: [{ cidade: "asc" }, { nome: "asc" }] }),
     prisma.computador.findMany({ where: { deletedAt: null }, orderBy: { tombo: "asc" } }),
     prisma.servidor.findMany({
       where: { ativo: true },
@@ -90,7 +91,7 @@ export default async function MonitorDetailPage({ params }: { params: Promise<{ 
         <dl className="grid gap-4 sm:grid-cols-3">
           <Item label="Usuário" value={monitor.usuario} />
           <Item label="Setor" value={monitor.departamento ? `${monitor.departamento.codigo}. ${monitor.departamento.nome}` : null} />
-          <Item label="Localização" value={monitor.localizacao?.nome} />
+          <Item label="Prédio" value={formatPredio(monitor.localizacao) || null} />
           <div>
             <dt className="text-xs font-medium text-slate-500">Computador associado</dt>
             <dd className="mt-1 text-sm">

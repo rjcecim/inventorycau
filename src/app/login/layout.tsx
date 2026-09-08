@@ -12,7 +12,7 @@ const highlights = [
   {
     icon: Building2,
     title: "Organização institucional",
-    text: "Setores, usuários e localizações em uma estrutura única.",
+    text: "Setores, usuários e prédios em uma estrutura única.",
   },
   {
     icon: ShieldCheck,

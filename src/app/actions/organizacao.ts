@@ -90,42 +90,51 @@ export async function saveLocalizacao(_: unknown, formData: FormData) {
   await requireAdmin();
   const parsed = z.object({
     id: z.string().optional(),
-    nome: z.string().min(1).max(100),
-    predio: z.string().max(80).nullable(),
-    andar: z.string().max(40).nullable(),
-    sala: z.string().max(40).nullable(),
+    nome: z.string().min(1, "Nome do prédio é obrigatório").max(100),
+    cidade: z.string().min(1, "Cidade é obrigatória").max(80),
+    uf: z.string().length(2, "Informe a UF"),
   }).safeParse({
     id: emptyToNull(formData.get("id")) ?? undefined,
     nome: String(formData.get("nome") ?? "").trim(),
-    predio: emptyToNull(formData.get("predio")),
-    andar: emptyToNull(formData.get("andar")),
-    sala: emptyToNull(formData.get("sala")),
+    cidade: String(formData.get("cidade") ?? "").trim(),
+    uf: emptyToNull(formData.get("uf"))?.toUpperCase() ?? "",
   });
   if (!parsed.success) return { error: parsed.error.issues[0].message };
   try {
+    const data = {
+      nome: parsed.data.nome,
+      cidade: parsed.data.cidade,
+      uf: parsed.data.uf,
+    };
     if (parsed.data.id) {
       await prisma.localizacao.update({
         where: { id: parsed.data.id },
-        data: { nome: parsed.data.nome, predio: parsed.data.predio, andar: parsed.data.andar, sala: parsed.data.sala },
+        data,
       });
     } else {
-      await prisma.localizacao.create({
-        data: { nome: parsed.data.nome, predio: parsed.data.predio, andar: parsed.data.andar, sala: parsed.data.sala },
-      });
+      await prisma.localizacao.create({ data });
     }
     revalidatePath("/localizacoes");
     revalidatePath("/");
+    revalidatePath("/computadores");
+    revalidatePath("/monitores");
     return { success: true };
   } catch {
-    return { error: "Erro ao salvar localização." };
+    return { error: "Erro ao salvar prédio." };
   }
 }
 
 export async function deleteLocalizacao(id: string) {
   await requireAdmin();
-  const inUse = await prisma.computador.count({ where: { localizacaoId: id, deletedAt: null } });
-  if (inUse) return { error: "Há equipamentos nesta localização." };
+  const [computers, monitors] = await Promise.all([
+    prisma.computador.count({ where: { localizacaoId: id, deletedAt: null } }),
+    prisma.monitor.count({ where: { localizacaoId: id, deletedAt: null } }),
+  ]);
+  if (computers || monitors) return { error: "Há equipamentos neste prédio." };
   await prisma.localizacao.delete({ where: { id } });
   revalidatePath("/localizacoes");
+  revalidatePath("/");
+  revalidatePath("/computadores");
+  revalidatePath("/monitores");
   return { success: true };
 }

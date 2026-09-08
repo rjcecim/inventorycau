@@ -23,7 +23,7 @@ export default async function MonitoresPage({
       include: { departamento: true, computador: true },
     }),
     prisma.departamento.findMany({ orderBy: { sortOrder: "asc" } }),
-    prisma.localizacao.findMany({ orderBy: { nome: "asc" } }),
+    prisma.localizacao.findMany({ orderBy: [{ cidade: "asc" }, { nome: "asc" }] }),
     prisma.computador.findMany({ where: { deletedAt: null }, orderBy: { tombo: "asc" } }),
     prisma.servidor.findMany({
       where: { ativo: true },

@@ -37,7 +37,7 @@ export function ComputerDetailActions({
 }: {
   computer: Computer;
   departments: { id: string; nome: string; codigo?: string }[];
-  locations: { id: string; nome: string }[];
+  locations: { id: string; nome: string; cidade?: string | null; uf?: string | null }[];
   people?: { id: string; nome: string; departamentoCodigo: string; departamentoNome: string }[];
 }) {
   const [edit, setEdit] = useState(false);

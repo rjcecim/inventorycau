@@ -10,26 +10,28 @@ export const dynamic = "force-dynamic";
 export default async function LocalizacoesPage() {
   const session = await auth();
   const locations = await prisma.localizacao.findMany({
-    orderBy: { nome: "asc" },
-    include: { _count: { select: { computadores: true } } },
+    orderBy: [{ cidade: "asc" }, { nome: "asc" }],
+    include: { _count: { select: { computadores: true, monitores: true } } },
   });
 
   return (
     <>
-      <PageHeader title="Localizações" description="Onde os equipamentos estão fisicamente." />
+      <PageHeader
+        title="Prédios"
+        description="Cadastre os prédios do órgão, inclusive em cidades diferentes. Ao registrar um computador, associe o setor e o prédio."
+      />
       <OrganizationManager
-        title="Localização"
-        extraFields
+        title="Prédio"
         isAdmin={isAdminRole(session?.user?.role)}
         saveAction={saveLocalizacao}
         deleteAction={deleteLocalizacao}
         items={locations.map((item) => ({
           id: item.id,
           nome: item.nome,
-          predio: item.predio,
-          andar: item.andar,
-          sala: item.sala,
-          count: item._count.computadores,
+          cidade: item.cidade,
+          uf: item.uf,
+          computers: item._count.computadores,
+          monitors: item._count.monitores,
         }))}
       />
     </>

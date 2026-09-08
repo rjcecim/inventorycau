@@ -4,6 +4,7 @@ import { DistributionCard } from "@/components/DistributionCard";
 import { MovementTimeline } from "@/components/MovementTimeline";
 import { statusLabel } from "@/lib/status";
 import { PageHeader } from "@/components/PageHeader";
+import { formatPredio } from "@/lib/predios";
 import type { AssetStatus } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
@@ -49,7 +50,7 @@ export default async function DashboardPage() {
 
   const departments = await prisma.departamento.findMany({ orderBy: { sortOrder: "asc" } });
   const locations = await prisma.localizacao.findMany();
-  const locMap = Object.fromEntries(locations.map((d) => [d.id, d.nome]));
+  const locMap = Object.fromEntries(locations.map((d) => [d.id, formatPredio(d)]));
 
   const statusItems = Array.from(
     new Set([...computerStatus.map((row) => row.status), ...monitorStatus.map((row) => row.status)]),
@@ -103,8 +104,8 @@ export default async function DashboardPage() {
       </div>
       <div className="grid gap-4 lg:grid-cols-2">
         <DistributionCard
-          title="Computadores por localização"
-          items={byLocation.map((row) => ({ label: locMap[row.localizacaoId ?? ""] ?? "Não informado", value: row._count._all })).sort((a, b) => b.value - a.value)}
+          title="Computadores por prédio"
+          items={byLocation.map((row) => ({ label: locMap[row.localizacaoId ?? ""] || "Não informado", value: row._count._all })).sort((a, b) => b.value - a.value)}
         />
         <section className="rounded-xl border border-line bg-white p-5">
           <div className="mb-4 flex items-center justify-between">

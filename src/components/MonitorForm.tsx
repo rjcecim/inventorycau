@@ -6,8 +6,9 @@ import { saveMonitor } from "@/app/actions/monitores";
 import { Button } from "@/components/ui/Button";
 import { Field, SelectInput, TextArea, TextInput } from "@/components/ui/Field";
 import { STATUS_ORDER, statusLabel } from "@/lib/status";
+import { formatPredio } from "@/lib/predios";
 
-type Option = { id: string; nome?: string; codigo?: string; tombo?: string; hostname?: string | null };
+type Option = { id: string; nome?: string; codigo?: string; tombo?: string; hostname?: string | null; cidade?: string | null; uf?: string | null };
 type PersonOption = { id: string; nome: string; departamentoCodigo: string; departamentoNome: string };
 
 export function MonitorForm({
@@ -104,10 +105,12 @@ export function MonitorForm({
             ))}
           </SelectInput>
         </Field>
-        <Field label="Localização">
+        <Field label="Prédio">
           <SelectInput name="localizacaoId" defaultValue={monitor?.localizacaoId ?? ""}>
             <option value="">Não informado</option>
-            {locations.map((item) => <option key={item.id} value={item.id}>{item.nome}</option>)}
+            {locations.map((item) => (
+              <option key={item.id} value={item.id}>{formatPredio({ nome: item.nome ?? "", cidade: item.cidade, uf: item.uf })}</option>
+            ))}
           </SelectInput>
         </Field>
         <Field label="Computador associado">

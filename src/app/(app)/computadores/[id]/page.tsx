@@ -6,6 +6,7 @@ import { isAdminRole } from "@/lib/authz";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { ComputerDetailActions } from "@/components/ComputerDetailActions";
 import { MovementTimeline } from "@/components/MovementTimeline";
+import { formatPredio } from "@/lib/predios";
 
 export const dynamic = "force-dynamic";
 
@@ -34,7 +35,7 @@ export default async function ComputerDetailPage({ params }: { params: Promise<{
 
   const [departments, locations, people] = await Promise.all([
     prisma.departamento.findMany({ orderBy: { sortOrder: "asc" } }),
-    prisma.localizacao.findMany({ orderBy: { nome: "asc" } }),
+    prisma.localizacao.findMany({ orderBy: [{ cidade: "asc" }, { nome: "asc" }] }),
     prisma.servidor.findMany({
       where: { ativo: true },
       orderBy: { nome: "asc" },
@@ -54,7 +55,7 @@ export default async function ComputerDetailPage({ params }: { params: Promise<{
             <StatusBadge status={computer.status} />
             <span>{computer.usuario || "Sem usuário"}</span>
             <span>{computer.departamento ? `${computer.departamento.codigo}. ${computer.departamento.nome}` : "Sem setor"}</span>
-            <span>{computer.localizacao?.nome || "Sem localização"}</span>
+            <span>{formatPredio(computer.localizacao) || "Sem prédio"}</span>
           </div>
         </div>
         {isAdminRole(session?.user?.role) ? (
@@ -106,7 +107,7 @@ export default async function ComputerDetailPage({ params }: { params: Promise<{
         <dl className="grid gap-4 sm:grid-cols-3">
           <Item label="Usuário" value={computer.usuario} />
           <Item label="Setor" value={computer.departamento ? `${computer.departamento.codigo}. ${computer.departamento.nome}` : null} />
-          <Item label="Localização" value={computer.localizacao?.nome} />
+          <Item label="Prédio" value={formatPredio(computer.localizacao) || null} />
           <Item label="Observações" value={computer.observacoes} />
         </dl>
       </section>

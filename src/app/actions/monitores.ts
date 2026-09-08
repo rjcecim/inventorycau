@@ -7,6 +7,7 @@ import { requireAdmin } from "@/lib/authz";
 import { logChanges } from "@/lib/audit";
 import { prisma } from "@/lib/prisma";
 import { emptyToNull } from "@/lib/utils";
+import { formatPredio } from "@/lib/predios";
 
 const schema = z.object({
   id: z.string().optional(),
@@ -119,7 +120,7 @@ export async function saveMonitor(_: unknown, formData: FormData) {
           changes: [
             { campo: "status", anterior: current.status, novo: data.status },
             { campo: "departamento", anterior: current.departamento?.nome, novo: nextDept?.nome },
-            { campo: "localizacao", anterior: current.localizacao?.nome, novo: nextLoc?.nome },
+            { campo: "localizacao", anterior: formatPredio(current.localizacao), novo: formatPredio(nextLoc) },
             { campo: "usuario", anterior: current.usuario, novo: usuario },
             { campo: "computador", anterior: current.computador?.tombo, novo: nextPc?.tombo },
             { campo: "tombo", anterior: current.tombo, novo: data.tombo },

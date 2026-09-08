@@ -84,6 +84,8 @@ model Servidor {
 model Localizacao {
   id           String       @id @default(cuid())
   nome         String
+  cidade       String       @default("")
+  uf           String?
   predio       String?
   andar        String?
   sala         String?
@@ -92,6 +94,8 @@ model Localizacao {
   computadores Computador[]
   monitores    Monitor[]
 
+  @@index([cidade])
+  @@index([nome])
   @@map("localizacoes")
 }
 

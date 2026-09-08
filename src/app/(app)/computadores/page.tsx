@@ -23,7 +23,7 @@ export default async function ComputadoresPage({
       include: { departamento: true, localizacao: true, _count: { select: { monitores: true } } },
     }),
     prisma.departamento.findMany({ orderBy: { sortOrder: "asc" } }),
-    prisma.localizacao.findMany({ orderBy: { nome: "asc" } }),
+    prisma.localizacao.findMany({ orderBy: [{ cidade: "asc" }, { nome: "asc" }] }),
     prisma.servidor.findMany({
       where: { ativo: true },
       orderBy: { nome: "asc" },
@@ -33,7 +33,7 @@ export default async function ComputadoresPage({
 
   return (
     <>
-      <PageHeader title="Computadores" description="Inventário de estações, com filtros por status, departamento e responsável." />
+      <PageHeader title="Computadores" description="Inventário de estações, com filtros por status, setor e prédio." />
       <ComputerTable
         computers={computers}
         departments={departments}
