@@ -3,14 +3,16 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { AssetStatus } from "@prisma/client";
-import { Plus } from "lucide-react";
+import { Pencil, Plus } from "lucide-react";
 import { MonitorForm } from "@/components/MonitorForm";
 import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { StatusBadge } from "@/components/ui/StatusBadge";
-import { SelectInput, TextInput } from "@/components/ui/Field";
-import { STATUS_ORDER, statusLabel } from "@/lib/status";
+import { TextInput } from "@/components/ui/Field";
+import { SearchSelect } from "@/components/ui/SearchSelect";
+import { STATUS_OPTIONS } from "@/lib/status";
+import { monitorAlocacao, setorLabel } from "@/lib/alocacao";
 
 type Row = {
   id: string;
@@ -19,9 +21,23 @@ type Row = {
   fabricante: string | null;
   modelo: string | null;
   status: AssetStatus;
+  tamanho: string | null;
+  resolucao: string | null;
+  conexoes: string | null;
+  observacoes: string | null;
   usuario: string | null;
+  servidorId: string | null;
+  departamentoId: string | null;
+  localizacaoId: string | null;
+  computadorId: string | null;
   departamento: { id?: string; nome: string; codigo?: string } | null;
-  computador: { id: string; tombo: string; hostname: string | null } | null;
+  computador: {
+    id: string;
+    tombo: string;
+    usuario: string | null;
+    status: AssetStatus;
+    departamento: { codigo?: string; nome: string } | null;
+  } | null;
 };
 
 export function MonitorTable({
@@ -35,7 +51,13 @@ export function MonitorTable({
   monitors: Row[];
   departments: { id: string; nome: string; codigo?: string }[];
   locations: { id: string; nome: string; cidade?: string | null; uf?: string | null }[];
-  computers: { id: string; tombo: string; hostname: string | null }[];
+  computers: {
+    id: string;
+    tombo: string;
+    usuario: string | null;
+    status: AssetStatus;
+    departamento: { codigo: string; nome: string } | null;
+  }[];
   people?: { id: string; nome: string; departamentoCodigo: string; departamentoNome: string }[];
   isAdmin: boolean;
 }) {
@@ -43,6 +65,7 @@ export function MonitorTable({
   const [q, setQ] = useState("");
   const [status, setStatus] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
+  const [editing, setEditing] = useState<Row | null>(null);
 
   const filtered = useMemo(() => {
     const term = q.toLowerCase();
@@ -62,10 +85,14 @@ export function MonitorTable({
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-1 flex-wrap gap-2">
           <TextInput value={q} onChange={(e) => setQ(e.target.value)} placeholder="Patrimônio, serial, usuário, computador…" className="max-w-sm" />
-          <SelectInput value={status} onChange={(e) => setStatus(e.target.value)} className="max-w-48">
-            <option value="">Todos os status</option>
-            {STATUS_ORDER.map((item) => <option key={item} value={item}>{statusLabel(item)}</option>)}
-          </SelectInput>
+          <SearchSelect
+            value={status}
+            onChange={setStatus}
+            emptyLabel="Todos os status"
+            placeholder="Pesquisar status…"
+            className="w-56"
+            options={STATUS_OPTIONS}
+          />
         </div>
         {isAdmin ? (
           <Button type="button" onClick={() => setCreateOpen(true)}>
@@ -83,35 +110,62 @@ export function MonitorTable({
               <th className="px-4 py-3">Usuário</th>
               <th className="px-4 py-3">Setor</th>
               <th className="px-4 py-3">Status</th>
+              {isAdmin ? <th className="px-4 py-3 text-right">Ações</th> : null}
             </tr>
           </thead>
           <tbody>
-            {filtered.map((row) => (
+            {filtered.map((row) => {
+              const alocacao = monitorAlocacao(row);
+              return (
               <tr key={row.id} className="cursor-pointer border-b border-line last:border-0 hover:bg-slate-50" onClick={() => router.push(`/monitores/${row.id}`)}>
                 <td className="px-4 py-3 font-medium text-slate-900">{row.tombo}</td>
                 <td className="px-4 py-3 text-slate-600">{[row.fabricante, row.modelo].filter(Boolean).join(" ") || "—"}</td>
-                <td className="px-4 py-3 text-slate-600">{row.computador?.hostname || row.computador?.tombo || "—"}</td>
-                <td className="px-4 py-3 text-slate-600">{row.usuario || "—"}</td>
-                <td className="px-4 py-3 text-slate-600">
-                  {row.departamento
-                    ? `${row.departamento.codigo ? `${row.departamento.codigo}. ` : ""}${row.departamento.nome}`
-                    : "—"}
-                </td>
-                <td className="px-4 py-3"><StatusBadge status={row.status} /></td>
+                <td className="px-4 py-3 text-slate-600">{row.computador?.tombo || "—"}</td>
+                <td className="px-4 py-3 text-slate-600">{alocacao.usuario || "—"}</td>
+                <td className="px-4 py-3 text-slate-600">{setorLabel(alocacao.departamento) || "—"}</td>
+                <td className="px-4 py-3"><StatusBadge status={alocacao.status} /></td>
+                {isAdmin ? (
+                  <td className="px-4 py-3 text-right">
+                    <button
+                      type="button"
+                      className="rounded-md p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-800"
+                      title="Editar"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setEditing(row);
+                      }}
+                    >
+                      <Pencil size={14} />
+                    </button>
+                  </td>
+                ) : null}
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
         {!filtered.length ? <EmptyState title="Nenhum monitor encontrado" /> : null}
       </div>
       <p className="mt-3 text-xs text-slate-500">{filtered.length} de {monitors.length} monitores</p>
-      <Dialog title="Novo monitor" open={createOpen} onClose={() => setCreateOpen(false)}>
+      <Dialog
+        title={editing ? "Editar monitor" : "Novo monitor"}
+        open={createOpen || Boolean(editing)}
+        onClose={() => {
+          setCreateOpen(false);
+          setEditing(null);
+        }}
+      >
         <MonitorForm
+          key={editing?.id ?? "new"}
+          monitor={editing ?? undefined}
           departments={departments}
           locations={locations}
           computers={computers}
           people={people}
-          onSuccess={() => setCreateOpen(false)}
+          onSuccess={() => {
+            setCreateOpen(false);
+            setEditing(null);
+          }}
         />
       </Dialog>
     </>

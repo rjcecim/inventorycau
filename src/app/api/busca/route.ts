@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
       ...computers.map((item) => ({
         id: item.id,
         type: "Computador",
-        title: item.hostname || item.tombo,
+        title: item.tombo,
         subtitle: [item.tombo, item.usuario].filter(Boolean).join(" · "),
         href: `/computadores/${item.id}`,
       })),
@@ -38,7 +38,6 @@ export async function GET(request: NextRequest) {
         deletedAt: null,
         OR: [
           { tombo: contains },
-          { hostname: contains },
           { serialNumber: contains },
           { usuario: contains },
           { modelo: contains },
@@ -66,7 +65,7 @@ export async function GET(request: NextRequest) {
     ...computers.map((item) => ({
       id: item.id,
       type: "Computador",
-      title: item.hostname || item.tombo,
+      title: item.tombo,
       subtitle: [item.tombo, item.serialNumber, item.usuario].filter(Boolean).join(" · "),
       href: `/computadores/${item.id}`,
     })),

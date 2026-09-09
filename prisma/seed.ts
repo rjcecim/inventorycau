@@ -113,7 +113,6 @@ async function main() {
       update: {},
       create: {
         tombo: `PC-${String(index).padStart(4, "0")}`,
-        hostname: `TCE-PC-${String(index).padStart(4, "0")}`,
         fabricante,
         modelo,
         status: AssetStatus.AVAILABLE,
@@ -169,7 +168,6 @@ async function main() {
           usuario: people[index]?.nome,
           status: AssetStatus.IN_USE,
           localizacaoId: "sede-geral",
-          hostname: computers[index].hostname ?? `TCE-${computers[index].tombo}`,
         },
       });
       if (monitors[index]) {
@@ -208,7 +206,7 @@ async function main() {
     if (parsed.fabricante) {
       await prisma.computador.update({
         where: { id: computer.id },
-        data: { fabricante: parsed.fabricante, modelo: parsed.modelo, hostname: computer.hostname ?? `TCE-${computer.tombo}` },
+        data: { fabricante: parsed.fabricante, modelo: parsed.modelo },
       });
     }
   }

@@ -4,7 +4,8 @@ import { useActionState, useState } from "react";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
-import { Field, SelectInput, TextInput } from "@/components/ui/Field";
+import { Field, TextInput } from "@/components/ui/Field";
+import { SearchSelect } from "@/components/ui/SearchSelect";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { formatCidade, UFS } from "@/lib/predios";
 
@@ -123,12 +124,17 @@ function OrgForm({
           <TextInput name="cidade" required defaultValue={item?.cidade ?? ""} placeholder="Belém" />
         </Field>
         <Field label="UF">
-          <SelectInput name="uf" required defaultValue={item?.uf ?? ""}>
-            <option value="">Selecione</option>
-            {UFS.map((uf) => (
-              <option key={uf.sigla} value={uf.sigla}>{uf.sigla}</option>
-            ))}
-          </SelectInput>
+          <SearchSelect
+            name="uf"
+            required
+            emptyLabel="Selecione"
+            placeholder="Pesquisar UF…"
+            defaultValue={item?.uf ?? ""}
+            options={UFS.map((uf) => ({
+              id: uf.sigla,
+              label: `${uf.sigla} — ${uf.nome}`,
+            }))}
+          />
         </Field>
       </div>
       {state && "error" in state && state.error ? <p className="text-sm text-rose-700">{state.error}</p> : null}

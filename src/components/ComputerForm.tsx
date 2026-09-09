@@ -4,8 +4,9 @@ import { useActionState } from "react";
 import type { AssetStatus } from "@prisma/client";
 import { saveComputador } from "@/app/actions/computadores";
 import { Button } from "@/components/ui/Button";
-import { Field, SelectInput, TextArea, TextInput } from "@/components/ui/Field";
-import { STATUS_ORDER, statusLabel } from "@/lib/status";
+import { Field, TextArea, TextInput } from "@/components/ui/Field";
+import { SearchSelect } from "@/components/ui/SearchSelect";
+import { STATUS_OPTIONS } from "@/lib/status";
 import { formatPredio } from "@/lib/predios";
 
 type Option = { id: string; nome: string; codigo?: string; cidade?: string | null; uf?: string | null };
@@ -21,7 +22,6 @@ export function ComputerForm({
   computer?: {
     id: string;
     tombo: string;
-    hostname: string | null;
     serialNumber: string | null;
     fabricante: string | null;
     modelo: string | null;
@@ -56,18 +56,17 @@ export function ComputerForm({
         <Field label="Patrimônio">
           <TextInput name="tombo" required defaultValue={computer?.tombo} placeholder="PC-0001" />
         </Field>
-        <Field label="Hostname" hint="opcional">
-          <TextInput name="hostname" defaultValue={computer?.hostname ?? ""} placeholder="CAU-PC-0001" />
-        </Field>
         <Field label="Nº de série" hint="opcional">
           <TextInput name="serialNumber" defaultValue={computer?.serialNumber ?? ""} />
         </Field>
         <Field label="Status">
-          <SelectInput name="status" defaultValue={computer?.status ?? "AVAILABLE"}>
-            {STATUS_ORDER.map((status) => (
-              <option key={status} value={status}>{statusLabel(status)}</option>
-            ))}
-          </SelectInput>
+          <SearchSelect
+            name="status"
+            allowEmpty={false}
+            placeholder="Pesquisar status…"
+            defaultValue={computer?.status ?? "AVAILABLE"}
+            options={STATUS_OPTIONS}
+          />
         </Field>
         <Field label="Fabricante" hint="opcional">
           <TextInput name="fabricante" defaultValue={computer?.fabricante ?? ""} placeholder="Dell" />
@@ -78,36 +77,39 @@ export function ComputerForm({
       </div>
       <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Alocação</p>
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Usuário cadastrado" hint="opcional">
-          <SelectInput name="servidorId" defaultValue={computer?.servidorId ?? ""}>
-            <option value="">Nenhum / informar manualmente</option>
-            {people.map((person) => (
-              <option key={person.id} value={person.id}>
-                {person.nome} ({person.departamentoCodigo}. {person.departamentoNome})
-              </option>
-            ))}
-          </SelectInput>
-        </Field>
-        <Field label="Usuário (texto)" hint="se não houver cadastro">
-          <TextInput name="usuario" defaultValue={computer?.usuario ?? ""} />
+        <Field label="Usuário" hint="opcional">
+          <SearchSelect
+            name="servidorId"
+            defaultValue={computer?.servidorId ?? ""}
+            emptyLabel="Nenhum"
+            placeholder="Pesquisar usuário…"
+            options={people.map((person) => ({
+              id: person.id,
+              label: `${person.nome} (${person.departamentoCodigo}. ${person.departamentoNome})`,
+            }))}
+          />
         </Field>
         <Field label="Setor">
-          <SelectInput name="departamentoId" defaultValue={computer?.departamentoId ?? ""}>
-            <option value="">Não informado</option>
-            {departments.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.codigo ? `${item.codigo}. ${item.nome}` : item.nome}
-              </option>
-            ))}
-          </SelectInput>
+          <SearchSelect
+            name="departamentoId"
+            defaultValue={computer?.departamentoId ?? ""}
+            placeholder="Pesquisar setor…"
+            options={departments.map((item) => ({
+              id: item.id,
+              label: item.codigo ? `${item.codigo}. ${item.nome}` : item.nome,
+            }))}
+          />
         </Field>
         <Field label="Prédio">
-          <SelectInput name="localizacaoId" defaultValue={computer?.localizacaoId ?? ""}>
-            <option value="">Não informado</option>
-            {locations.map((item) => (
-              <option key={item.id} value={item.id}>{formatPredio(item)}</option>
-            ))}
-          </SelectInput>
+          <SearchSelect
+            name="localizacaoId"
+            defaultValue={computer?.localizacaoId ?? ""}
+            placeholder="Pesquisar prédio…"
+            options={locations.map((item) => ({
+              id: item.id,
+              label: formatPredio(item),
+            }))}
+          />
         </Field>
       </div>
       <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Hardware e sistema</p>

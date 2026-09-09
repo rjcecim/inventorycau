@@ -11,7 +11,6 @@ import { useRouter } from "next/navigation";
 type Computer = {
   id: string;
   tombo: string;
-  hostname: string | null;
   serialNumber: string | null;
   fabricante: string | null;
   modelo: string | null;

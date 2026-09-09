@@ -22,7 +22,6 @@ const statusEnum = z.enum([
 const schema = z.object({
   id: z.string().optional(),
   tombo: z.string().min(1, "Patrimônio é obrigatório").max(50),
-  hostname: z.string().max(80).nullable(),
   serialNumber: z.string().max(80).nullable(),
   fabricante: z.string().max(80).nullable(),
   modelo: z.string().max(120).nullable(),
@@ -34,7 +33,6 @@ const schema = z.object({
   soVersao: z.string().max(80).nullable(),
   arquitetura: z.string().max(40).nullable(),
   observacoes: z.string().max(1000).nullable(),
-  usuario: z.string().max(150).nullable(),
   servidorId: z.string().nullable(),
   departamentoId: z.string().nullable(),
   localizacaoId: z.string().nullable(),
@@ -44,7 +42,6 @@ function fromForm(formData: FormData) {
   return schema.safeParse({
     id: emptyToNull(formData.get("id")) ?? undefined,
     tombo: String(formData.get("tombo") ?? "").trim(),
-    hostname: emptyToNull(formData.get("hostname")),
     serialNumber: emptyToNull(formData.get("serialNumber")),
     fabricante: emptyToNull(formData.get("fabricante")),
     modelo: emptyToNull(formData.get("modelo")),
@@ -56,7 +53,6 @@ function fromForm(formData: FormData) {
     soVersao: emptyToNull(formData.get("soVersao")),
     arquitetura: emptyToNull(formData.get("arquitetura")),
     observacoes: emptyToNull(formData.get("observacoes")),
-    usuario: emptyToNull(formData.get("usuario")),
     servidorId: emptyToNull(formData.get("servidorId")),
     departamentoId: emptyToNull(formData.get("departamentoId")),
     localizacaoId: emptyToNull(formData.get("localizacaoId")),
@@ -70,6 +66,7 @@ function refresh() {
   revalidatePath("/movimentacoes");
   revalidatePath("/relatorios");
   revalidatePath("/departamentos");
+  revalidatePath("/visao-geral");
 }
 
 export async function saveComputador(_: unknown, formData: FormData) {
@@ -82,7 +79,7 @@ export async function saveComputador(_: unknown, formData: FormData) {
     const servidor = data.servidorId
       ? await prisma.servidor.findUnique({ where: { id: data.servidorId } })
       : null;
-    const usuario = servidor?.nome ?? data.usuario;
+    const usuario = servidor?.nome ?? null;
     const departamentoId = servidor?.departamentoId ?? data.departamentoId;
 
     if (data.id) {
@@ -104,7 +101,6 @@ export async function saveComputador(_: unknown, formData: FormData) {
           where: { id: data.id },
           data: {
             tombo: data.tombo,
-            hostname: data.hostname,
             serialNumber: data.serialNumber,
             fabricante: data.fabricante,
             modelo: data.modelo,
@@ -122,6 +118,16 @@ export async function saveComputador(_: unknown, formData: FormData) {
             localizacaoId: data.localizacaoId,
           },
         });
+        await tx.monitor.updateMany({
+          where: { computadorId: data.id, deletedAt: null },
+          data: {
+            usuario,
+            servidorId: data.servidorId,
+            departamentoId,
+            localizacaoId: data.localizacaoId,
+            status: data.status,
+          },
+        });
         await logChanges({
           tx,
           kind: AssetKind.COMPUTER,
@@ -132,7 +138,6 @@ export async function saveComputador(_: unknown, formData: FormData) {
             { campo: "departamento", anterior: current.departamento?.nome, novo: nextDept?.nome },
             { campo: "localizacao", anterior: formatPredio(current.localizacao), novo: formatPredio(nextLoc) },
             { campo: "usuario", anterior: current.usuario, novo: usuario },
-            { campo: "hostname", anterior: current.hostname, novo: data.hostname },
             { campo: "tombo", anterior: current.tombo, novo: data.tombo },
           ],
         });
@@ -141,7 +146,6 @@ export async function saveComputador(_: unknown, formData: FormData) {
       const created = await prisma.computador.create({
         data: {
           tombo: data.tombo,
-          hostname: data.hostname,
           serialNumber: data.serialNumber,
           fabricante: data.fabricante,
           modelo: data.modelo,

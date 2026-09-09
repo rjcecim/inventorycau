@@ -26,3 +26,8 @@ export const STATUS_ORDER: AssetStatus[] = [
 export function statusLabel(status: AssetStatus) {
   return ASSET_STATUS[status].label;
 }
+
+export const STATUS_OPTIONS = STATUS_ORDER.map((status) => ({
+  id: status,
+  label: statusLabel(status),
+}));

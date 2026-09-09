@@ -50,7 +50,7 @@ export default async function ComputerDetailPage({ params }: { params: Promise<{
           <p className="text-xs font-medium text-slate-500">
             <Link href="/computadores" className="hover:underline">Computadores</Link> / {computer.tombo}
           </p>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight">{computer.hostname || computer.tombo}</h1>
+          <h1 className="mt-1 text-2xl font-semibold tracking-tight">{computer.tombo}</h1>
           <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-slate-600">
             <StatusBadge status={computer.status} />
             <span>{computer.usuario || "Sem usuário"}</span>
@@ -76,7 +76,6 @@ export default async function ComputerDetailPage({ params }: { params: Promise<{
       <section className="rounded-xl border border-line bg-white p-5">
         <h2 className="mb-4 text-sm font-semibold">Geral</h2>
         <dl className="grid gap-4 sm:grid-cols-3">
-          <Item label="Hostname" value={computer.hostname} />
           <Item label="Patrimônio" value={computer.tombo} />
           <Item label="Nº de série" value={computer.serialNumber} />
           <Item label="Fabricante" value={computer.fabricante} />

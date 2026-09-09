@@ -79,9 +79,9 @@ export async function deleteServidor(id: string) {
   await requireAdmin();
   const linked = await prisma.computador.count({ where: { servidorId: id, deletedAt: null } });
   if (linked) {
-    await prisma.computador.updateMany({ where: { servidorId: id }, data: { servidorId: null } });
+    await prisma.computador.updateMany({ where: { servidorId: id }, data: { servidorId: null, usuario: null } });
   }
-  await prisma.monitor.updateMany({ where: { servidorId: id }, data: { servidorId: null } });
+  await prisma.monitor.updateMany({ where: { servidorId: id }, data: { servidorId: null, usuario: null } });
   await prisma.servidor.delete({ where: { id } });
   refresh();
   return { success: true };

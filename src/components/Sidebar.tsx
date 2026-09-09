@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import {
   LayoutDashboard,
+  Table2,
   Monitor,
   PcCase,
   Building2,
@@ -12,14 +14,21 @@ import {
   BarChart3,
   Users,
   LogOut,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { cn } from "@/lib/utils";
 
+const STORAGE_KEY = "cau-sidebar-collapsed";
+
 const groups = [
   {
     label: "Visão",
-    items: [{ href: "/", icon: LayoutDashboard, label: "Dashboard" }],
+    items: [
+      { href: "/", icon: LayoutDashboard, label: "Dashboard" },
+      { href: "/visao-geral", icon: Table2, label: "Visão Geral" },
+    ],
   },
   {
     label: "Inventário",
@@ -52,22 +61,60 @@ function isActive(pathname: string, href: string) {
 
 export function Sidebar({ userName, userRole }: { userName?: string | null; userRole?: string | null }) {
   const pathname = usePathname();
+  const [collapsed, setCollapsed] = useState(false);
+
+  useEffect(() => {
+    setCollapsed(localStorage.getItem(STORAGE_KEY) === "1");
+  }, []);
+
+  function toggle() {
+    setCollapsed((current) => {
+      const next = !current;
+      localStorage.setItem(STORAGE_KEY, next ? "1" : "0");
+      return next;
+    });
+  }
+
+  const initial = (userName ?? "U").trim().charAt(0).toUpperCase() || "U";
 
   return (
-    <aside className="flex w-60 shrink-0 flex-col bg-sidebar text-slate-300">
-      <div className="flex items-center gap-3 px-5 py-5">
-        <div className="grid h-9 w-9 place-items-center rounded-lg bg-brand text-xs font-bold text-white">CAU</div>
-        <div>
-          <p className="text-sm font-semibold text-white">CAU Ativos</p>
-          <p className="text-xs text-slate-400">Inventário de TI</p>
-        </div>
+    <aside
+      className={cn(
+        "flex shrink-0 flex-col overflow-hidden bg-sidebar text-slate-300 transition-[width] duration-200",
+        collapsed ? "w-[4.5rem]" : "w-60",
+      )}
+    >
+      <div className={cn("flex items-center py-5", collapsed ? "flex-col gap-3 px-2" : "gap-3 px-4")}>
+        <Link href="/" className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-brand text-xs font-bold text-white" title="CAU Ativos">
+          CAU
+        </Link>
+        {collapsed ? null : (
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold text-white">CAU Ativos</p>
+            <p className="truncate text-xs text-slate-400">Inventário de TI</p>
+          </div>
+        )}
+        <button
+          type="button"
+          onClick={toggle}
+          className="rounded-md p-2 text-slate-400 hover:bg-white/10 hover:text-white"
+          aria-expanded={!collapsed}
+          aria-label={collapsed ? "Expandir menu" : "Recolher menu"}
+          title={collapsed ? "Expandir menu" : "Recolher menu"}
+        >
+          {collapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
+        </button>
       </div>
-      <nav className="flex-1 overflow-y-auto px-3 pb-4">
+      <nav className={cn("flex-1 overflow-y-auto pb-4", collapsed ? "px-2" : "px-3")}>
         {groups.map((group) => (
-          <div key={group.label} className="mb-5">
-            <p className="mb-1.5 px-2 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-              {group.label}
-            </p>
+          <div key={group.label} className={collapsed ? "mb-2" : "mb-5"}>
+            {collapsed ? (
+              <p className="sr-only">{group.label}</p>
+            ) : (
+              <p className="mb-1.5 px-2 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                {group.label}
+              </p>
+            )}
             <ul className="space-y-0.5">
               {group.items.map((item) => {
                 const Icon = item.icon;
@@ -76,13 +123,15 @@ export function Sidebar({ userName, userRole }: { userName?: string | null; user
                   <li key={item.href}>
                     <Link
                       href={item.href}
+                      title={collapsed ? item.label : undefined}
                       className={cn(
-                        "flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition",
+                        "flex items-center rounded-lg text-sm transition",
+                        collapsed ? "justify-center px-0 py-2.5" : "gap-2.5 px-2.5 py-2",
                         active ? "bg-white/10 text-white" : "text-slate-400 hover:bg-white/5 hover:text-white",
                       )}
                     >
-                      <Icon size={16} />
-                      {item.label}
+                      <Icon size={collapsed ? 18 : 16} />
+                      {collapsed ? <span className="sr-only">{item.label}</span> : item.label}
                     </Link>
                   </li>
                 );
@@ -91,11 +140,17 @@ export function Sidebar({ userName, userRole }: { userName?: string | null; user
           </div>
         ))}
       </nav>
-      <div className="flex items-center gap-2 border-t border-white/10 px-4 py-4">
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-medium text-white">{userName}</p>
-          <p className="text-xs text-slate-500">{userRole === "ADMIN" ? "Administrador" : "Usuário"}</p>
-        </div>
+      <div className={cn("border-t border-white/10 py-4", collapsed ? "flex flex-col items-center gap-2 px-2" : "flex items-center gap-2 px-4")}>
+        {collapsed ? (
+          <div className="grid h-8 w-8 place-items-center rounded-full bg-white/10 text-xs font-semibold text-white" title={userName ?? "Usuário"}>
+            {initial}
+          </div>
+        ) : (
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-medium text-white">{userName}</p>
+            <p className="text-xs text-slate-500">{userRole === "ADMIN" ? "Administrador" : "Usuário"}</p>
+          </div>
+        )}
         <button
           type="button"
           onClick={() => signOut({ callbackUrl: "/login" })}

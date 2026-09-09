@@ -36,7 +36,6 @@ export const FIELD_LABELS: Record<string, string> = {
   localizacao: "Prédio",
   usuario: "Usuário",
   computador: "Computador associado",
-  hostname: "Hostname",
   tombo: "Patrimônio",
   created: "Cadastro",
   deleted: "Exclusão",

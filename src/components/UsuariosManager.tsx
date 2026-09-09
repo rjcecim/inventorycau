@@ -6,7 +6,8 @@ import { saveServidor, deleteServidor } from "@/app/actions/servidores";
 import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { Field, SelectInput, TextInput } from "@/components/ui/Field";
+import { Field, TextInput } from "@/components/ui/Field";
+import { SearchSelect } from "@/components/ui/SearchSelect";
 
 type Dept = { id: string; codigo: string; nome: string };
 type Person = {
@@ -57,12 +58,17 @@ export function UsuariosManager({
             placeholder="Buscar nome, matrícula, e-mail…"
             className="max-w-sm"
           />
-          <SelectInput value={dept} onChange={(e) => setDept(e.target.value)} className="max-w-72">
-            <option value="">Todos os setores</option>
-            {departments.map((d) => (
-              <option key={d.id} value={d.id}>{d.codigo}. {d.nome}</option>
-            ))}
-          </SelectInput>
+          <SearchSelect
+            value={dept}
+            onChange={setDept}
+            emptyLabel="Todos os setores"
+            placeholder="Pesquisar setor…"
+            className="w-72"
+            options={departments.map((d) => ({
+              id: d.id,
+              label: `${d.codigo}. ${d.nome}`,
+            }))}
+          />
         </div>
         {isAdmin ? (
           <Button type="button" onClick={() => { setEditing(null); setOpen(true); }}>
@@ -162,18 +168,30 @@ function ServidorForm({
         <TextInput name="email" type="email" defaultValue={person?.email ?? ""} />
       </Field>
       <Field label="Setor">
-        <SelectInput name="departamentoId" required defaultValue={person?.departamentoId ?? ""}>
-          <option value="">Selecione…</option>
-          {departments.map((d) => (
-            <option key={d.id} value={d.id}>{d.codigo}. {d.nome}</option>
-          ))}
-        </SelectInput>
+        <SearchSelect
+          name="departamentoId"
+          required
+          allowEmpty
+          emptyLabel="Selecione…"
+          placeholder="Pesquisar setor…"
+          defaultValue={person?.departamentoId ?? ""}
+          options={departments.map((d) => ({
+            id: d.id,
+            label: `${d.codigo}. ${d.nome}`,
+          }))}
+        />
       </Field>
       <Field label="Situação">
-        <SelectInput name="ativo" defaultValue={person?.ativo === false ? "false" : "true"}>
-          <option value="true">Ativo</option>
-          <option value="false">Inativo</option>
-        </SelectInput>
+        <SearchSelect
+          name="ativo"
+          allowEmpty={false}
+          placeholder="Pesquisar situação…"
+          defaultValue={person?.ativo === false ? "false" : "true"}
+          options={[
+            { id: "true", label: "Ativo" },
+            { id: "false", label: "Inativo" },
+          ]}
+        />
       </Field>
       {state && "error" in state && state.error ? (
         <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">{state.error}</p>

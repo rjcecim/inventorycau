@@ -53,7 +53,7 @@ export function GlobalSearch() {
         className="flex w-full max-w-md items-center gap-2 rounded-lg border border-line bg-white px-3 py-2 text-sm text-slate-500 shadow-sm"
       >
         <Search size={16} />
-        <span className="flex-1 text-left">Buscar patrimônio, hostname, serial…</span>
+        <span className="flex-1 text-left">Buscar patrimônio, serial, usuário…</span>
         <kbd className="hidden rounded border border-line px-1.5 py-0.5 text-[10px] text-slate-400 sm:inline">Ctrl K</kbd>
       </button>
       {open ? (
@@ -68,7 +68,7 @@ export function GlobalSearch() {
                 autoFocus
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Patrimônio, hostname, serial, usuário…"
+                placeholder="Patrimônio, serial, usuário…"
                 className="w-full border-0 py-3 text-sm outline-none"
               />
             </div>

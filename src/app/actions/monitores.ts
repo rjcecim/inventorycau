@@ -28,7 +28,6 @@ const schema = z.object({
     "INACTIVE",
   ]),
   observacoes: z.string().max(1000).nullable(),
-  usuario: z.string().max(150).nullable(),
   servidorId: z.string().nullable(),
   departamentoId: z.string().nullable(),
   localizacaoId: z.string().nullable(),
@@ -47,7 +46,6 @@ function fromForm(formData: FormData) {
     conexoes: emptyToNull(formData.get("conexoes")),
     status: formData.get("status") || "AVAILABLE",
     observacoes: emptyToNull(formData.get("observacoes")),
-    usuario: emptyToNull(formData.get("usuario")),
     servidorId: emptyToNull(formData.get("servidorId")),
     departamentoId: emptyToNull(formData.get("departamentoId")),
     localizacaoId: emptyToNull(formData.get("localizacaoId")),
@@ -61,6 +59,7 @@ function refresh() {
   revalidatePath("/monitores");
   revalidatePath("/movimentacoes");
   revalidatePath("/relatorios");
+  revalidatePath("/visao-geral");
 }
 
 export async function saveMonitor(_: unknown, formData: FormData) {
@@ -70,11 +69,20 @@ export async function saveMonitor(_: unknown, formData: FormData) {
   const data = parsed.data;
 
   try {
-    const servidor = data.servidorId
+    const computador = data.computadorId
+      ? await prisma.computador.findUnique({ where: { id: data.computadorId } })
+      : null;
+    if (data.computadorId && !computador) return { error: "Computador não encontrado." };
+
+    const servidor = !computador && data.servidorId
       ? await prisma.servidor.findUnique({ where: { id: data.servidorId } })
       : null;
-    const usuario = servidor?.nome ?? data.usuario;
-    const departamentoId = servidor?.departamentoId ?? data.departamentoId;
+
+    const usuario = computador?.usuario ?? servidor?.nome ?? null;
+    const servidorId = computador?.servidorId ?? data.servidorId;
+    const departamentoId = computador?.departamentoId ?? servidor?.departamentoId ?? data.departamentoId;
+    const localizacaoId = computador?.localizacaoId ?? data.localizacaoId;
+    const status = computador?.status ?? data.status;
 
     if (data.id) {
       const current = await prisma.monitor.findUnique({
@@ -85,11 +93,8 @@ export async function saveMonitor(_: unknown, formData: FormData) {
       const nextDept = departamentoId
         ? await prisma.departamento.findUnique({ where: { id: departamentoId } })
         : null;
-      const nextLoc = data.localizacaoId
-        ? await prisma.localizacao.findUnique({ where: { id: data.localizacaoId } })
-        : null;
-      const nextPc = data.computadorId
-        ? await prisma.computador.findUnique({ where: { id: data.computadorId } })
+      const nextLoc = localizacaoId
+        ? await prisma.localizacao.findUnique({ where: { id: localizacaoId } })
         : null;
 
       await prisma.$transaction(async (tx) => {
@@ -103,12 +108,12 @@ export async function saveMonitor(_: unknown, formData: FormData) {
             tamanho: data.tamanho,
             resolucao: data.resolucao,
             conexoes: data.conexoes,
-            status: data.status,
+            status,
             observacoes: data.observacoes,
             usuario,
-            servidorId: data.servidorId,
+            servidorId,
             departamentoId,
-            localizacaoId: data.localizacaoId,
+            localizacaoId,
             computadorId: data.computadorId,
           },
         });
@@ -118,11 +123,11 @@ export async function saveMonitor(_: unknown, formData: FormData) {
           monitorId: data.id,
           actorId: session.user.id,
           changes: [
-            { campo: "status", anterior: current.status, novo: data.status },
+            { campo: "status", anterior: current.status, novo: status },
             { campo: "departamento", anterior: current.departamento?.nome, novo: nextDept?.nome },
             { campo: "localizacao", anterior: formatPredio(current.localizacao), novo: formatPredio(nextLoc) },
             { campo: "usuario", anterior: current.usuario, novo: usuario },
-            { campo: "computador", anterior: current.computador?.tombo, novo: nextPc?.tombo },
+            { campo: "computador", anterior: current.computador?.tombo, novo: computador?.tombo },
             { campo: "tombo", anterior: current.tombo, novo: data.tombo },
           ],
         });
@@ -137,12 +142,12 @@ export async function saveMonitor(_: unknown, formData: FormData) {
           tamanho: data.tamanho,
           resolucao: data.resolucao,
           conexoes: data.conexoes,
-          status: data.status,
+          status,
           observacoes: data.observacoes,
           usuario,
-          servidorId: data.servidorId,
+          servidorId,
           departamentoId,
-          localizacaoId: data.localizacaoId,
+          localizacaoId,
           computadorId: data.computadorId,
         },
       });

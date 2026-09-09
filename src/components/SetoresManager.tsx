@@ -5,7 +5,8 @@ import { Pencil, Plus, Trash2 } from "lucide-react";
 import { saveDepartamento, deleteDepartamento } from "@/app/actions/organizacao";
 import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
-import { Field, SelectInput, TextInput } from "@/components/ui/Field";
+import { Field, TextInput } from "@/components/ui/Field";
+import { SearchSelect } from "@/components/ui/SearchSelect";
 import { EmptyState } from "@/components/ui/EmptyState";
 
 type Item = {
@@ -148,12 +149,16 @@ function SetorForm({
         <TextInput name="nome" required defaultValue={item?.nome} />
       </Field>
       <Field label="Setor pai" hint="opcional">
-        <SelectInput name="parentId" defaultValue={item?.parentId ?? ""}>
-          <option value="">Nenhum (nível raiz)</option>
-          {parents.map((p) => (
-            <option key={p.id} value={p.id}>{p.codigo}. {p.nome}</option>
-          ))}
-        </SelectInput>
+        <SearchSelect
+          name="parentId"
+          defaultValue={item?.parentId ?? ""}
+          emptyLabel="Nenhum (nível raiz)"
+          placeholder="Pesquisar setor pai…"
+          options={parents.map((p) => ({
+            id: p.id,
+            label: `${p.codigo}. ${p.nome}`,
+          }))}
+        />
       </Field>
       {state && "error" in state && state.error ? (
         <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">{state.error}</p>

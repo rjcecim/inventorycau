@@ -1,15 +1,24 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import type { AssetStatus } from "@prisma/client";
 import { saveMonitor } from "@/app/actions/monitores";
 import { Button } from "@/components/ui/Button";
-import { Field, SelectInput, TextArea, TextInput } from "@/components/ui/Field";
-import { STATUS_ORDER, statusLabel } from "@/lib/status";
+import { Field, TextArea, TextInput } from "@/components/ui/Field";
+import { SearchSelect } from "@/components/ui/SearchSelect";
+import { STATUS_OPTIONS, statusLabel } from "@/lib/status";
 import { formatPredio } from "@/lib/predios";
+import { setorLabel } from "@/lib/alocacao";
 
-type Option = { id: string; nome?: string; codigo?: string; tombo?: string; hostname?: string | null; cidade?: string | null; uf?: string | null };
+type Option = { id: string; nome?: string; codigo?: string; tombo?: string; cidade?: string | null; uf?: string | null };
 type PersonOption = { id: string; nome: string; departamentoCodigo: string; departamentoNome: string };
+type ComputerOption = {
+  id: string;
+  tombo: string;
+  usuario: string | null;
+  status: AssetStatus;
+  departamento: { codigo: string; nome: string } | null;
+};
 
 export function MonitorForm({
   monitor,
@@ -38,10 +47,13 @@ export function MonitorForm({
   };
   departments: Option[];
   locations: Option[];
-  computers: Option[];
+  computers: ComputerOption[];
   people?: PersonOption[];
   onSuccess?: () => void;
 }) {
+  const [computadorId, setComputadorId] = useState(monitor?.computadorId ?? "");
+  const linkedComputer = computers.find((item) => item.id === computadorId) ?? null;
+
   const [state, action, pending] = useActionState(async (prev: unknown, fd: FormData) => {
     const res = await saveMonitor(prev, fd);
     if (res.success) onSuccess?.();
@@ -73,55 +85,82 @@ export function MonitorForm({
         <Field label="Conexões">
           <TextInput name="conexoes" defaultValue={monitor?.conexoes ?? ""} placeholder="HDMI, DP" />
         </Field>
-        <Field label="Status">
-          <SelectInput name="status" defaultValue={monitor?.status ?? "AVAILABLE"}>
-            {STATUS_ORDER.map((status) => (
-              <option key={status} value={status}>{statusLabel(status)}</option>
-            ))}
-          </SelectInput>
-        </Field>
+        {linkedComputer ? (
+          <input type="hidden" name="status" value={linkedComputer.status} />
+        ) : (
+          <Field label="Status">
+            <SearchSelect
+              name="status"
+              allowEmpty={false}
+              placeholder="Pesquisar status…"
+              defaultValue={monitor?.status ?? "AVAILABLE"}
+              options={STATUS_OPTIONS}
+            />
+          </Field>
+        )}
       </div>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Usuário cadastrado" hint="opcional">
-          <SelectInput name="servidorId" defaultValue={monitor?.servidorId ?? ""}>
-            <option value="">Nenhum / informar manualmente</option>
-            {people.map((person) => (
-              <option key={person.id} value={person.id}>
-                {person.nome} ({person.departamentoCodigo}. {person.departamentoNome})
-              </option>
-            ))}
-          </SelectInput>
-        </Field>
-        <Field label="Usuário (texto)">
-          <TextInput name="usuario" defaultValue={monitor?.usuario ?? ""} />
-        </Field>
-        <Field label="Setor">
-          <SelectInput name="departamentoId" defaultValue={monitor?.departamentoId ?? ""}>
-            <option value="">Não informado</option>
-            {departments.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.codigo ? `${item.codigo}. ${item.nome}` : item.nome}
-              </option>
-            ))}
-          </SelectInput>
-        </Field>
-        <Field label="Prédio">
-          <SelectInput name="localizacaoId" defaultValue={monitor?.localizacaoId ?? ""}>
-            <option value="">Não informado</option>
-            {locations.map((item) => (
-              <option key={item.id} value={item.id}>{formatPredio({ nome: item.nome ?? "", cidade: item.cidade, uf: item.uf })}</option>
-            ))}
-          </SelectInput>
-        </Field>
-        <Field label="Computador associado">
-          <SelectInput name="computadorId" defaultValue={monitor?.computadorId ?? ""}>
-            <option value="">Nenhum</option>
-            {computers.map((item) => (
-              <option key={item.id} value={item.id}>{item.hostname || item.tombo} ({item.tombo})</option>
-            ))}
-          </SelectInput>
-        </Field>
-      </div>
+
+      <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Mover para</p>
+      <Field label="Computador" hint="herda usuário, setor e status do PC">
+        <SearchSelect
+          name="computadorId"
+          value={computadorId}
+          onChange={setComputadorId}
+          emptyLabel="Nenhum — alocar só a um setor"
+          placeholder="Pesquisar computador…"
+          options={computers.map((item) => ({
+            id: item.id,
+            label: item.usuario ? `${item.tombo} — ${item.usuario}` : item.tombo,
+          }))}
+        />
+      </Field>
+      {linkedComputer ? (
+        <p className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
+          Este monitor ficará com o usuário <span className="font-medium text-slate-900">{linkedComputer.usuario || "não informado"}</span>
+          {", o setor "}
+          <span className="font-medium text-slate-900">{setorLabel(linkedComputer.departamento) || "não informado"}</span>
+          {" e o status "}
+          <span className="font-medium text-slate-900">{statusLabel(linkedComputer.status)}</span> do computador.
+        </p>
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Setor" hint="quando não estiver em um computador">
+            <SearchSelect
+              name="departamentoId"
+              defaultValue={monitor?.departamentoId ?? ""}
+              placeholder="Pesquisar setor…"
+              options={departments.map((item) => ({
+                id: item.id,
+                label: item.codigo ? `${item.codigo}. ${item.nome}` : item.nome ?? "",
+              }))}
+            />
+          </Field>
+          <Field label="Prédio">
+            <SearchSelect
+              name="localizacaoId"
+              defaultValue={monitor?.localizacaoId ?? ""}
+              placeholder="Pesquisar prédio…"
+              options={locations.map((item) => ({
+                id: item.id,
+                label: formatPredio({ nome: item.nome ?? "", cidade: item.cidade, uf: item.uf }),
+              }))}
+            />
+          </Field>
+          <Field label="Usuário" hint="opcional">
+            <SearchSelect
+              name="servidorId"
+              defaultValue={monitor?.servidorId ?? ""}
+              emptyLabel="Nenhum"
+              placeholder="Pesquisar usuário…"
+              options={people.map((person) => ({
+                id: person.id,
+                label: `${person.nome} (${person.departamentoCodigo}. ${person.departamentoNome})`,
+              }))}
+            />
+          </Field>
+        </div>
+      )}
+
       <Field label="Observações">
         <TextArea name="observacoes" defaultValue={monitor?.observacoes ?? ""} />
       </Field>

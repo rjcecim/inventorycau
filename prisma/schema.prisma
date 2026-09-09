@@ -101,7 +101,6 @@ model Localizacao {
 
 model Computador {
   id                  String          @id @default(cuid())
-  hostname            String?
   tombo               String          @unique
   serialNumber        String?         @unique @map("serial_number")
   fabricante          String?
@@ -133,7 +132,6 @@ model Computador {
   @@index([departamentoId])
   @@index([localizacaoId])
   @@index([servidorId])
-  @@index([hostname])
   @@index([fabricante])
   @@map("computadores")
 }

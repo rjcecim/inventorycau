@@ -20,11 +20,15 @@ export default async function MonitoresPage({
     prisma.monitor.findMany({
       where: { deletedAt: null, ...(status ? { status } : {}) },
       orderBy: { tombo: "asc" },
-      include: { departamento: true, computador: true },
+      include: { departamento: true, computador: { include: { departamento: true } } },
     }),
     prisma.departamento.findMany({ orderBy: { sortOrder: "asc" } }),
     prisma.localizacao.findMany({ orderBy: [{ cidade: "asc" }, { nome: "asc" }] }),
-    prisma.computador.findMany({ where: { deletedAt: null }, orderBy: { tombo: "asc" } }),
+    prisma.computador.findMany({
+      where: { deletedAt: null },
+      orderBy: { tombo: "asc" },
+      include: { departamento: true },
+    }),
     prisma.servidor.findMany({
       where: { ativo: true },
       orderBy: { nome: "asc" },
@@ -34,7 +38,7 @@ export default async function MonitoresPage({
 
   return (
     <>
-      <PageHeader title="Monitores" description="Ativos independentes, com vínculo opcional a um computador." />
+      <PageHeader title="Monitores" description="Associe o monitor a um computador (herda usuário e setor) ou aloque diretamente a um setor." />
       <MonitorTable
         monitors={monitors}
         departments={departments}

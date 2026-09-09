@@ -7,6 +7,7 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 import { MovementTimeline } from "@/components/MovementTimeline";
 import { MonitorDetailActions } from "@/components/MonitorDetailActions";
 import { formatPredio } from "@/lib/predios";
+import { monitorAlocacao, setorLabel } from "@/lib/alocacao";
 
 export const dynamic = "force-dynamic";
 
@@ -27,7 +28,7 @@ export default async function MonitorDetailPage({ params }: { params: Promise<{ 
     include: {
       departamento: true,
       localizacao: true,
-      computador: true,
+      computador: { include: { departamento: true, localizacao: true } },
       movimentacoes: { orderBy: { createdDate: "desc" }, take: 30, include: { actor: true, computador: true, monitor: true } },
     },
   });
@@ -36,7 +37,11 @@ export default async function MonitorDetailPage({ params }: { params: Promise<{ 
   const [departments, locations, computers, people] = await Promise.all([
     prisma.departamento.findMany({ orderBy: { sortOrder: "asc" } }),
     prisma.localizacao.findMany({ orderBy: [{ cidade: "asc" }, { nome: "asc" }] }),
-    prisma.computador.findMany({ where: { deletedAt: null }, orderBy: { tombo: "asc" } }),
+    prisma.computador.findMany({
+      where: { deletedAt: null },
+      orderBy: { tombo: "asc" },
+      include: { departamento: true },
+    }),
     prisma.servidor.findMany({
       where: { ativo: true },
       orderBy: { nome: "asc" },
@@ -53,7 +58,7 @@ export default async function MonitorDetailPage({ params }: { params: Promise<{ 
           </p>
           <h1 className="mt-1 text-2xl font-semibold tracking-tight">{monitor.tombo}</h1>
           <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-slate-600">
-            <StatusBadge status={monitor.status} />
+            <StatusBadge status={monitorAlocacao(monitor).status} />
             <span>{[monitor.fabricante, monitor.modelo].filter(Boolean).join(" ") || "Modelo não informado"}</span>
           </div>
         </div>
@@ -89,15 +94,15 @@ export default async function MonitorDetailPage({ params }: { params: Promise<{ 
       <section className="rounded-xl border border-line bg-white p-5">
         <h2 className="mb-4 text-sm font-semibold">Alocação</h2>
         <dl className="grid gap-4 sm:grid-cols-3">
-          <Item label="Usuário" value={monitor.usuario} />
-          <Item label="Setor" value={monitor.departamento ? `${monitor.departamento.codigo}. ${monitor.departamento.nome}` : null} />
-          <Item label="Prédio" value={formatPredio(monitor.localizacao) || null} />
+          <Item label="Usuário" value={monitorAlocacao(monitor).usuario} />
+          <Item label="Setor" value={setorLabel(monitorAlocacao(monitor).departamento) || null} />
+          <Item label="Prédio" value={formatPredio(monitor.computador?.localizacao ?? monitor.localizacao) || null} />
           <div>
             <dt className="text-xs font-medium text-slate-500">Computador associado</dt>
             <dd className="mt-1 text-sm">
               {monitor.computador ? (
                 <Link className="font-medium text-brand hover:underline" href={`/computadores/${monitor.computador.id}`}>
-                  {monitor.computador.hostname || monitor.computador.tombo}
+                  {monitor.computador.tombo}
                 </Link>
               ) : "—"}
             </dd>

@@ -36,7 +36,13 @@ export function MonitorDetailActions({
   monitor: Monitor;
   departments: { id: string; nome: string; codigo?: string }[];
   locations: { id: string; nome: string; cidade?: string | null; uf?: string | null }[];
-  computers: { id: string; tombo: string; hostname: string | null }[];
+  computers: {
+    id: string;
+    tombo: string;
+    usuario: string | null;
+    status: AssetStatus;
+    departamento: { codigo: string; nome: string } | null;
+  }[];
   people?: { id: string; nome: string; departamentoCodigo: string; departamentoNome: string }[];
 }) {
   const [edit, setEdit] = useState(false);

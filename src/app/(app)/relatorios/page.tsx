@@ -74,7 +74,7 @@ export default async function RelatoriosPage({
                 <td className="px-4 py-3 font-medium">
                   <Link className="text-brand hover:underline" href={`/computadores/${item.id}`}>{item.tombo}</Link>
                 </td>
-                <td className="px-4 py-3 text-slate-600">{item.hostname || item.usuario || "—"}</td>
+                <td className="px-4 py-3 text-slate-600">{item.usuario || "—"}</td>
                 <td className="px-4 py-3 text-slate-600">{item.departamento?.nome || "—"}</td>
                 <td className="px-4 py-3"><StatusBadge status={item.status} /></td>
               </tr>
