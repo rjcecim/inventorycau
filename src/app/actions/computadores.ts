@@ -3,7 +3,7 @@
 import { AssetKind } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { requireAdmin } from "@/lib/authz";
+import { requireAdmin, requireSession } from "@/lib/authz";
 import { logChanges } from "@/lib/audit";
 import { prisma } from "@/lib/prisma";
 import { emptyToNull } from "@/lib/utils";
@@ -29,9 +29,6 @@ const schema = z.object({
   processador: z.string().max(120).nullable(),
   memoriaRam: z.string().max(80).nullable(),
   armazenamento: z.string().max(80).nullable(),
-  sistemaOperacional: z.string().max(80).nullable(),
-  soVersao: z.string().max(80).nullable(),
-  arquitetura: z.string().max(40).nullable(),
   observacoes: z.string().max(1000).nullable(),
   servidorId: z.string().nullable(),
   departamentoId: z.string().nullable(),
@@ -49,9 +46,6 @@ function fromForm(formData: FormData) {
     processador: emptyToNull(formData.get("processador")),
     memoriaRam: emptyToNull(formData.get("memoriaRam")),
     armazenamento: emptyToNull(formData.get("armazenamento")),
-    sistemaOperacional: emptyToNull(formData.get("sistemaOperacional")),
-    soVersao: emptyToNull(formData.get("soVersao")),
-    arquitetura: emptyToNull(formData.get("arquitetura")),
     observacoes: emptyToNull(formData.get("observacoes")),
     servidorId: emptyToNull(formData.get("servidorId")),
     departamentoId: emptyToNull(formData.get("departamentoId")),
@@ -80,8 +74,9 @@ export async function saveComputador(_: unknown, formData: FormData) {
       ? await prisma.servidor.findUnique({ where: { id: data.servidorId } })
       : null;
     const usuario = servidor?.nome ?? null;
-    const departamentoId = servidor?.departamentoId ?? data.departamentoId;
+    const departamentoId = data.departamentoId;
 
+    let savedId = data.id;
     if (data.id) {
       const current = await prisma.computador.findUnique({
         where: { id: data.id },
@@ -108,9 +103,6 @@ export async function saveComputador(_: unknown, formData: FormData) {
             processador: data.processador,
             memoriaRam: data.memoriaRam,
             armazenamento: data.armazenamento,
-            sistemaOperacional: data.sistemaOperacional,
-            soVersao: data.soVersao,
-            arquitetura: data.arquitetura,
             observacoes: data.observacoes,
             usuario,
             servidorId: data.servidorId,
@@ -153,9 +145,6 @@ export async function saveComputador(_: unknown, formData: FormData) {
           processador: data.processador,
           memoriaRam: data.memoriaRam,
           armazenamento: data.armazenamento,
-          sistemaOperacional: data.sistemaOperacional,
-          soVersao: data.soVersao,
-          arquitetura: data.arquitetura,
           observacoes: data.observacoes,
           usuario,
           servidorId: data.servidorId,
@@ -169,11 +158,93 @@ export async function saveComputador(_: unknown, formData: FormData) {
         actorId: session.user.id,
         changes: [{ campo: "created", novo: created.tombo }],
       });
+      savedId = created.id;
     }
     refresh();
-    return { success: true };
+    return { success: true, id: savedId };
   } catch {
     return { error: "Não foi possível salvar. Verifique patrimônio e serial duplicados." };
+  }
+}
+
+export async function updateAlocacaoComputador(_: unknown, formData: FormData) {
+  const session = await requireSession();
+  const parsed = z
+    .object({
+      id: z.string().min(1),
+      status: statusEnum,
+      servidorId: z.string().nullable(),
+      departamentoId: z.string().nullable(),
+      localizacaoId: z.string().nullable(),
+    })
+    .safeParse({
+      id: String(formData.get("id") ?? ""),
+      status: formData.get("status") || "AVAILABLE",
+      servidorId: emptyToNull(formData.get("servidorId")),
+      departamentoId: emptyToNull(formData.get("departamentoId")),
+      localizacaoId: emptyToNull(formData.get("localizacaoId")),
+    });
+  if (!parsed.success) return { error: parsed.error.issues[0].message };
+
+  const data = parsed.data;
+  try {
+    const current = await prisma.computador.findFirst({
+      where: { id: data.id, deletedAt: null },
+      include: { departamento: true, localizacao: true },
+    });
+    if (!current) return { error: "Computador não encontrado." };
+
+    const servidor = data.servidorId
+      ? await prisma.servidor.findUnique({ where: { id: data.servidorId } })
+      : null;
+    const usuario = servidor?.nome ?? null;
+    const nextDept = data.departamentoId
+      ? await prisma.departamento.findUnique({ where: { id: data.departamentoId } })
+      : null;
+    const nextLoc = data.localizacaoId
+      ? await prisma.localizacao.findUnique({ where: { id: data.localizacaoId } })
+      : null;
+
+    await prisma.$transaction(async (tx) => {
+      await tx.computador.update({
+        where: { id: data.id },
+        data: {
+          status: data.status,
+          usuario,
+          servidorId: data.servidorId,
+          departamentoId: data.departamentoId,
+          localizacaoId: data.localizacaoId,
+        },
+      });
+      await tx.monitor.updateMany({
+        where: { computadorId: data.id, deletedAt: null },
+        data: {
+          usuario,
+          servidorId: data.servidorId,
+          departamentoId: data.departamentoId,
+          localizacaoId: data.localizacaoId,
+          status: data.status,
+        },
+      });
+      await logChanges({
+        tx,
+        kind: AssetKind.COMPUTER,
+        computadorId: data.id,
+        actorId: session.user.id,
+        changes: [
+          { campo: "status", anterior: current.status, novo: data.status },
+          { campo: "departamento", anterior: current.departamento?.nome, novo: nextDept?.nome },
+          { campo: "localizacao", anterior: formatPredio(current.localizacao), novo: formatPredio(nextLoc) },
+          { campo: "usuario", anterior: current.usuario, novo: usuario },
+        ],
+      });
+    });
+
+    refresh();
+    revalidatePath(`/computadores/${data.id}`);
+    return { success: true, id: data.id };
+  } catch {
+    return { error: "Não foi possível atualizar a alocação." };
   }
 }
 

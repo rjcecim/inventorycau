@@ -141,7 +141,7 @@ export function SearchSelect({
       {open ? (
         <ul
           role="listbox"
-          className="absolute z-50 mt-1 max-h-56 w-full overflow-y-auto rounded-lg border border-line bg-white py-1 shadow-lg"
+          className="absolute z-50 mt-1.5 max-h-56 w-full overflow-y-auto rounded-xl border border-line bg-white py-1 shadow-[0_16px_40px_-16px_rgba(15,23,42,0.28)]"
         >
           {filtered.length ? (
             filtered.map((item, index) => (

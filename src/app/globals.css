@@ -26,8 +26,14 @@ body {
 button, input, select, textarea { font: inherit; }
 
 :focus-visible {
-  outline: 2px solid var(--color-brand);
-  outline-offset: 2px;
+  outline: none;
+}
+
+.surface {
+  border-radius: 1rem;
+  border: 1px solid var(--color-line);
+  background: #fff;
+  box-shadow: 0 1px 2px rgb(15 23 42 / 0.04);
 }
 
 .scrollbar-thin::-webkit-scrollbar { width: 8px; height: 8px; }

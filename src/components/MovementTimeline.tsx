@@ -1,6 +1,10 @@
+import Link from "next/link";
+import { ArrowRight, Monitor, PcCase } from "lucide-react";
 import { FIELD_LABELS } from "@/lib/audit";
 import { formatDateTime } from "@/lib/utils";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { ASSET_STATUS } from "@/lib/status";
+import type { AssetStatus } from "@prisma/client";
 
 type Movement = {
   id: string;
@@ -9,38 +13,151 @@ type Movement = {
   valorNovo: string | null;
   createdDate: Date;
   actor: { fullName: string } | null;
-  computador: { tombo: string } | null;
-  monitor: { tombo: string } | null;
+  computador: { id: string; tombo: string } | null;
+  monitor: { id: string; tombo: string } | null;
   kind: "COMPUTER" | "MONITOR";
 };
 
-export function MovementTimeline({ items, showAsset = false }: { items: Movement[]; showAsset?: boolean }) {
-  if (!items.length) {
-    return <EmptyState title="Nenhuma movimentação registrada" description="Alterações de status, alocação e vínculos aparecerão aqui." />;
+type ChangeGroup = {
+  key: string;
+  kind: "COMPUTER" | "MONITOR";
+  assetLabel: string;
+  assetHref: string | null;
+  actor: string | null;
+  createdDate: Date;
+  changes: Array<{ id: string; campo: string; from: string; to: string }>;
+};
+
+function displayValue(campo: string, value: string | null) {
+  if (!value) return "—";
+  if (campo === "status" && value in ASSET_STATUS) {
+    return ASSET_STATUS[value as AssetStatus].label;
+  }
+  return value;
+}
+
+function fieldLabel(campo: string) {
+  return FIELD_LABELS[campo] ?? campo;
+}
+
+function groupMovements(items: Movement[]): ChangeGroup[] {
+  const groups = new Map<string, ChangeGroup>();
+
+  for (const item of items) {
+    const timeKey = new Date(item.createdDate).toISOString().slice(0, 19);
+    const assetId = item.kind === "COMPUTER" ? item.computador?.id : item.monitor?.id;
+    const tombo = item.kind === "COMPUTER" ? item.computador?.tombo : item.monitor?.tombo;
+    const key = `${item.kind}:${assetId ?? tombo ?? "x"}:${timeKey}:${item.actor?.fullName ?? ""}`;
+
+    const existing = groups.get(key);
+    const change = {
+      id: item.id,
+      campo: item.campo,
+      from: displayValue(item.campo, item.valorAnterior),
+      to: displayValue(item.campo, item.valorNovo),
+    };
+
+    if (existing) {
+      existing.changes.push(change);
+      continue;
+    }
+
+    groups.set(key, {
+      key,
+      kind: item.kind,
+      assetLabel: item.kind === "COMPUTER" ? `PC ${tombo ?? ""}` : `Monitor ${tombo ?? ""}`,
+      assetHref: assetId
+        ? item.kind === "COMPUTER"
+          ? `/computadores/${assetId}`
+          : `/monitores/${assetId}`
+        : null,
+      actor: item.actor?.fullName ?? null,
+      createdDate: item.createdDate,
+      changes: [change],
+    });
   }
 
+  return [...groups.values()];
+}
+
+function ValueChip({ value }: { value: string }) {
+  const empty = value === "—";
   return (
-    <ol className="space-y-4">
-      {items.map((item) => (
-        <li key={item.id} className="relative border-l border-line pl-4">
-          <span className="absolute -left-1.5 top-1.5 h-3 w-3 rounded-full bg-brand" />
-          <p className="text-sm font-medium text-slate-900">
-            {FIELD_LABELS[item.campo] ?? item.campo}
-            {showAsset ? (
-              <span className="ml-2 text-xs font-normal text-slate-500">
-                {item.kind === "COMPUTER" ? item.computador?.tombo : item.monitor?.tombo}
-              </span>
-            ) : null}
-          </p>
-          <p className="text-sm text-slate-600">
-            {item.valorAnterior || "—"} → {item.valorNovo || "—"}
-          </p>
-          <p className="text-xs text-slate-400">
-            {formatDateTime(item.createdDate)}
-            {item.actor ? ` · ${item.actor.fullName}` : ""}
-          </p>
-        </li>
-      ))}
+    <span
+      className={
+        empty
+          ? "rounded-md bg-slate-50 px-2 py-0.5 text-slate-400 ring-1 ring-line"
+          : "rounded-md bg-white px-2 py-0.5 text-slate-800 ring-1 ring-line"
+      }
+    >
+      {value}
+    </span>
+  );
+}
+
+export function MovementTimeline({ items, showAsset = false }: { items: Movement[]; showAsset?: boolean }) {
+  if (!items.length) {
+    return (
+      <EmptyState
+        title="Nenhuma movimentação registrada"
+        description="Alterações de status, alocação e vínculos aparecerão aqui."
+      />
+    );
+  }
+
+  const groups = groupMovements(items);
+
+  return (
+    <ol className="space-y-3">
+      {groups.map((group) => {
+        const Icon = group.kind === "COMPUTER" ? PcCase : Monitor;
+        return (
+          <li key={group.key} className="rounded-xl border border-line bg-slate-50/60 p-4">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <div className="flex min-w-0 items-center gap-2">
+                <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-white text-slate-500 ring-1 ring-line">
+                  <Icon size={15} />
+                </span>
+                {showAsset ? (
+                  group.assetHref ? (
+                    <Link href={group.assetHref} className="truncate text-sm font-semibold text-brand hover:underline">
+                      {group.assetLabel}
+                    </Link>
+                  ) : (
+                    <span className="truncate text-sm font-semibold text-slate-900">{group.assetLabel}</span>
+                  )
+                ) : (
+                  <span className="text-sm font-semibold text-slate-900">
+                    {group.changes.length > 1 ? "Alterações registradas" : fieldLabel(group.changes[0].campo)}
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-slate-400">
+                {formatDateTime(group.createdDate)}
+                {group.actor ? ` · ${group.actor}` : ""}
+              </p>
+            </div>
+
+            <ul className="space-y-2">
+              {group.changes.map((change) => (
+                <li
+                  key={change.id}
+                  className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg bg-white px-3 py-2 text-sm ring-1 ring-line"
+                >
+                  <span className="w-36 shrink-0 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                    {fieldLabel(change.campo)}
+                  </span>
+                  <div className="flex min-w-0 flex-wrap items-center gap-2">
+                    <ValueChip value={change.from} />
+                    <ArrowRight size={14} className="shrink-0 text-slate-300" />
+                    <ValueChip value={change.to} />
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </li>
+        );
+      })}
     </ol>
   );
 }

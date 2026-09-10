@@ -32,7 +32,7 @@ export async function logChanges(params: {
 
 export const FIELD_LABELS: Record<string, string> = {
   status: "Status",
-  departamento: "Departamento",
+  departamento: "Setor",
   localizacao: "Prédio",
   usuario: "Usuário",
   computador: "Computador associado",

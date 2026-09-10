@@ -13,7 +13,3 @@ export function formatDateTime(value: Date | string) {
     timeStyle: "short",
   }).format(new Date(value));
 }
-
-export function displayName(parts: Array<string | null | undefined>) {
-  return parts.filter(Boolean).join(" · ") || "—";
-}

@@ -1,120 +1,209 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { DistributionCard } from "@/components/DistributionCard";
+import { AttentionList } from "@/components/AttentionList";
+import { DistributionCard, StatusSplitCard } from "@/components/DistributionCard";
 import { MovementTimeline } from "@/components/MovementTimeline";
-import { statusLabel } from "@/lib/status";
+import { statusLabel, STATUS_ORDER } from "@/lib/status";
 import { PageHeader } from "@/components/PageHeader";
 import { formatPredio } from "@/lib/predios";
+import { setorLabel } from "@/lib/alocacao";
 import type { AssetStatus } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
 
-function groupCount(rows: { key: string | null; _count: { _all: number } }[]) {
-  return rows
-    .map((row) => ({ label: row.key || "Não informado", value: row._count._all }))
-    .sort((a, b) => b.value - a.value)
-    .slice(0, 8);
+function countStatus(rows: { status: AssetStatus; _count: { _all: number } }[], status: AssetStatus) {
+  return rows.find((row) => row.status === status)?._count._all ?? 0;
+}
+
+function bump(map: Map<string, number>, key: string) {
+  map.set(key, (map.get(key) ?? 0) + 1);
 }
 
 export default async function DashboardPage() {
-  const where = { deletedAt: null };
+  const where = { deletedAt: null } as const;
+
   const [
     computerStatus,
     monitorStatus,
-    byDept,
-    byMaker,
-    byLocation,
+    byDeptPc,
+    byLocationPc,
     recent,
+    departments,
+    locations,
+    pcsSemSetor,
+    pcsSemPredio,
+    pcsSemUsuario,
+    pcsSemMonitor,
+    monitoresSemAlocacao,
+    monitorsForDist,
   ] = await Promise.all([
     prisma.computador.groupBy({ by: ["status"], where, _count: { _all: true } }),
     prisma.monitor.groupBy({ by: ["status"], where, _count: { _all: true } }),
     prisma.computador.groupBy({ by: ["departamentoId"], where, _count: { _all: true } }),
-    prisma.computador.groupBy({ by: ["fabricante"], where, _count: { _all: true } }),
     prisma.computador.groupBy({ by: ["localizacaoId"], where, _count: { _all: true } }),
     prisma.movimentacao.findMany({
       take: 8,
       orderBy: { createdDate: "desc" },
       include: { actor: true, computador: true, monitor: true },
     }),
+    prisma.departamento.findMany({ orderBy: { sortOrder: "asc" } }),
+    prisma.localizacao.findMany(),
+    prisma.computador.count({ where: { ...where, departamentoId: null } }),
+    prisma.computador.count({ where: { ...where, localizacaoId: null } }),
+    prisma.computador.count({
+      where: {
+        ...where,
+        servidorId: null,
+        OR: [{ usuario: null }, { usuario: "" }],
+      },
+    }),
+    prisma.computador.count({
+      where: { ...where, monitores: { none: { deletedAt: null } } },
+    }),
+    prisma.monitor.count({
+      where: { ...where, computadorId: null, departamentoId: null },
+    }),
+    prisma.monitor.findMany({
+      where,
+      select: {
+        departamentoId: true,
+        localizacaoId: true,
+        computador: {
+          select: { departamentoId: true, localizacaoId: true },
+        },
+      },
+    }),
   ]);
 
   const computerTotal = computerStatus.reduce((sum, row) => sum + row._count._all, 0);
   const monitorTotal = monitorStatus.reduce((sum, row) => sum + row._count._all, 0);
-  const countStatus = (rows: typeof computerStatus, status: AssetStatus) =>
-    rows.find((row) => row.status === status)?._count._all ?? 0;
+  const pcInUse = countStatus(computerStatus, "IN_USE");
+  const pcReserve = countStatus(computerStatus, "RESERVE");
+  const maintenance =
+    countStatus(computerStatus, "MAINTENANCE") + countStatus(monitorStatus, "MAINTENANCE");
+  const awaiting =
+    countStatus(computerStatus, "AWAITING_INSTALL") +
+    countStatus(monitorStatus, "AWAITING_INSTALL");
 
-  const inUse = countStatus(computerStatus, "IN_USE") + countStatus(monitorStatus, "IN_USE");
-  const available = countStatus(computerStatus, "AVAILABLE") + countStatus(monitorStatus, "AVAILABLE");
-  const maintenance = countStatus(computerStatus, "MAINTENANCE") + countStatus(monitorStatus, "MAINTENANCE");
-  const disposed = countStatus(computerStatus, "DISPOSED") + countStatus(monitorStatus, "DISPOSED");
-
-  const departments = await prisma.departamento.findMany({ orderBy: { sortOrder: "asc" } });
-  const locations = await prisma.localizacao.findMany();
+  const deptMap = Object.fromEntries(
+    departments.map((d) => [d.id, setorLabel(d) || d.nome]),
+  );
   const locMap = Object.fromEntries(locations.map((d) => [d.id, formatPredio(d)]));
 
-  const statusItems = Array.from(
-    new Set([...computerStatus.map((row) => row.status), ...monitorStatus.map((row) => row.status)]),
-  ).map((status) => ({
+  const monitorByDept = new Map<string, number>();
+  const monitorByLoc = new Map<string, number>();
+  for (const monitor of monitorsForDist) {
+    const deptId = monitor.computador?.departamentoId ?? monitor.departamentoId;
+    const locId = monitor.computador?.localizacaoId ?? monitor.localizacaoId;
+    bump(monitorByDept, deptId ?? "");
+    bump(monitorByLoc, locId ?? "");
+  }
+
+  const pcByDept = byDeptPc.map((row) => ({
+    label: row.departamentoId ? deptMap[row.departamentoId] || "Não informado" : "Não informado",
+    value: row._count._all,
+  }));
+
+  const monByDept = [...monitorByDept.entries()].map(([id, value]) => ({
+    label: id ? deptMap[id] || "Não informado" : "Não informado",
+    value,
+  }));
+
+  const pcByLoc = byLocationPc.map((row) => ({
+    label: locMap[row.localizacaoId ?? ""] || "Não informado",
+    value: row._count._all,
+  }));
+
+  const monByLoc = [...monitorByLoc.entries()].map(([id, value]) => ({
+    label: id ? locMap[id] || "Não informado" : "Não informado",
+    value,
+  }));
+
+  const statusSplit = STATUS_ORDER.map((status) => ({
     label: statusLabel(status),
-    value: countStatus(computerStatus, status) + countStatus(monitorStatus, status),
+    computers: countStatus(computerStatus, status),
+    monitors: countStatus(monitorStatus, status),
   }));
 
   const kpis = [
-    { href: "/computadores", label: "Computadores", value: computerTotal },
-    { href: "/monitores", label: "Monitores", value: monitorTotal },
-    { href: "/computadores?status=IN_USE", label: "Em uso", value: inUse },
-    { href: "/computadores?status=AVAILABLE", label: "Disponíveis", value: available },
-    { href: "/relatorios?tipo=manutencao", label: "Manutenção", value: maintenance },
-    { href: "/relatorios?tipo=baixados", label: "Baixados", value: disposed },
+    { href: "/computadores", label: "Computadores", value: computerTotal, hint: null as string | null },
+    { href: "/monitores", label: "Monitores", value: monitorTotal, hint: null },
+    { href: "/computadores?status=IN_USE", label: "Em uso (PC)", value: pcInUse, hint: null },
+    { href: "/computadores?status=RESERVE", label: "Reserva (PC)", value: pcReserve, hint: null },
+    {
+      href: "/relatorios?tipo=manutencao",
+      label: "Manutenção",
+      value: maintenance,
+      hint: `${countStatus(computerStatus, "MAINTENANCE")} PC · ${countStatus(monitorStatus, "MAINTENANCE")} mon.`,
+    },
+    {
+      href: "/relatorios?tipo=aguardando",
+      label: "Aguardando instalação",
+      value: awaiting,
+      hint: `${countStatus(computerStatus, "AWAITING_INSTALL")} PC · ${countStatus(monitorStatus, "AWAITING_INSTALL")} mon.`,
+    },
+  ];
+
+  const pendencias = [
+    { label: "PCs sem setor", value: pcsSemSetor, href: "/relatorios?tipo=sem-setor" },
+    { label: "PCs sem prédio", value: pcsSemPredio, href: "/relatorios?tipo=sem-predio" },
+    { label: "PCs sem usuário", value: pcsSemUsuario, href: "/relatorios?tipo=sem-usuario" },
+    { label: "PCs sem monitor", value: pcsSemMonitor, href: "/relatorios?tipo=sem-monitor" },
+    {
+      label: "Monitores sem PC e sem setor",
+      value: monitoresSemAlocacao,
+      href: "/relatorios?tipo=monitor-sem-alocacao",
+    },
+    {
+      label: "Em reserva",
+      value: countStatus(computerStatus, "RESERVE") + countStatus(monitorStatus, "RESERVE"),
+      href: "/relatorios?tipo=reserva",
+    },
+    { label: "Em manutenção", value: maintenance, href: "/relatorios?tipo=manutencao" },
+    { label: "Aguardando instalação", value: awaiting, href: "/relatorios?tipo=aguardando" },
   ];
 
   return (
     <>
-      <PageHeader title="Dashboard" description="Parque de computadores e monitores do CAU em um único painel." />
+      <PageHeader
+        title="Dashboard"
+        description="Visão operacional do parque: totais, pendências de alocação e distribuição por setor e prédio."
+      />
       <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-6">
         {kpis.map((kpi) => (
           <Link
             key={kpi.label}
             href={kpi.href}
-            className="rounded-xl border border-line bg-white px-4 py-4 transition hover:border-slate-300"
+            className="surface px-4 py-4 transition hover:border-slate-300 hover:shadow-sm"
           >
             <p className="text-xs font-medium text-slate-500">{kpi.label}</p>
             <p className="mt-2 text-2xl font-semibold tracking-tight">{kpi.value}</p>
+            {kpi.hint ? <p className="mt-1 text-[11px] text-slate-400">{kpi.hint}</p> : null}
           </Link>
         ))}
       </div>
+
       <div className="mb-6 grid gap-4 lg:grid-cols-3">
-        <DistributionCard
-          title="Computadores por setor"
-          items={byDept.map((row) => ({
-            label: row.departamentoId
-              ? (() => {
-                  const d = departments.find((item) => item.id === row.departamentoId);
-                  return d ? `${d.codigo}. ${d.nome}` : "Não informado";
-                })()
-              : "Não informado",
-            value: row._count._all,
-          })).sort((a, b) => b.value - a.value)}
-        />
-        <DistributionCard title="Computadores por fabricante" items={groupCount(byMaker.map((row) => ({ key: row.fabricante, _count: row._count })))} />
-        <DistributionCard
-          title="Ativos por status"
-          items={statusItems.sort((a, b) => b.value - a.value)}
-        />
+        <AttentionList items={pendencias} />
+        <StatusSplitCard title="Status (PC × Monitor)" statuses={statusSplit} />
+        <DistributionCard title="Computadores por setor" items={pcByDept} />
       </div>
-      <div className="grid gap-4 lg:grid-cols-2">
-        <DistributionCard
-          title="Computadores por prédio"
-          items={byLocation.map((row) => ({ label: locMap[row.localizacaoId ?? ""] || "Não informado", value: row._count._all })).sort((a, b) => b.value - a.value)}
-        />
-        <section className="rounded-xl border border-line bg-white p-5">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-slate-900">Atividade recente</h2>
-            <Link href="/movimentacoes" className="text-xs font-medium text-brand hover:underline">Ver todas</Link>
-          </div>
-          <MovementTimeline items={recent} showAsset />
-        </section>
+
+      <div className="mb-6 grid gap-4 lg:grid-cols-3">
+        <DistributionCard title="Monitores por setor" items={monByDept} />
+        <DistributionCard title="Computadores por prédio" items={pcByLoc} />
+        <DistributionCard title="Monitores por prédio" items={monByLoc} />
       </div>
+
+      <section className="surface p-5">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-slate-900">Atividade recente</h2>
+          <Link href="/movimentacoes" className="text-xs font-medium text-brand hover:underline">
+            Ver todas
+          </Link>
+        </div>
+        <MovementTimeline items={recent} showAsset />
+      </section>
     </>
   );
 }

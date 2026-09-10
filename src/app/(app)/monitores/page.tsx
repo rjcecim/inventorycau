@@ -16,40 +16,21 @@ export default async function MonitoresPage({
   const params = await searchParams;
   const status = params.status as AssetStatus | undefined;
 
-  const [monitors, departments, locations, computers, people] = await Promise.all([
-    prisma.monitor.findMany({
-      where: { deletedAt: null, ...(status ? { status } : {}) },
-      orderBy: { tombo: "asc" },
-      include: { departamento: true, computador: { include: { departamento: true } } },
-    }),
-    prisma.departamento.findMany({ orderBy: { sortOrder: "asc" } }),
-    prisma.localizacao.findMany({ orderBy: [{ cidade: "asc" }, { nome: "asc" }] }),
-    prisma.computador.findMany({
-      where: { deletedAt: null },
-      orderBy: { tombo: "asc" },
-      include: { departamento: true },
-    }),
-    prisma.servidor.findMany({
-      where: { ativo: true },
-      orderBy: { nome: "asc" },
-      include: { departamento: true },
-    }),
-  ]);
+  const monitors = await prisma.monitor.findMany({
+    where: { deletedAt: null, ...(status ? { status } : {}) },
+    orderBy: { tombo: "asc" },
+    include: {
+      departamento: true,
+      localizacao: true,
+      computador: { include: { departamento: true, localizacao: true } },
+    },
+  });
 
   return (
     <>
-      <PageHeader title="Monitores" description="Associe o monitor a um computador (herda usuário e setor) ou aloque diretamente a um setor." />
+      <PageHeader title="Monitores" description="Inventário de monitores. Use o filtro no cabeçalho de cada coluna, como no Excel." />
       <MonitorTable
         monitors={monitors}
-        departments={departments}
-        locations={locations}
-        computers={computers}
-        people={people.map((p) => ({
-          id: p.id,
-          nome: p.nome,
-          departamentoCodigo: p.departamento.codigo,
-          departamentoNome: p.departamento.nome,
-        }))}
         isAdmin={isAdminRole(session?.user?.role)}
       />
     </>

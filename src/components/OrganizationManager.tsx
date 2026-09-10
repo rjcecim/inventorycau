@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { Plus } from "lucide-react";
+import { Pencil, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
 import { Field, TextInput } from "@/components/ui/Field";
@@ -52,7 +52,7 @@ export function OrganizationManager({
           </Button>
         </div>
       ) : null}
-      <div className="overflow-hidden rounded-xl border border-line bg-white">
+      <div className="surface overflow-hidden">
         {items.length ? (
           <ul className="divide-y divide-line">
             {grouped.map((group) => (
@@ -72,12 +72,26 @@ export function OrganizationManager({
                         </p>
                       </div>
                       {isAdmin ? (
-                        <div className="flex gap-2">
-                          <Button type="button" variant="secondary" onClick={() => { setEditing(item); setOpen(true); }}>Editar</Button>
-                          <Button type="button" variant="ghost" onClick={async () => {
-                            const res = await deleteAction(item.id);
-                            if (res.error) setError(res.error);
-                          }}>Excluir</Button>
+                        <div className="flex gap-1">
+                          <button
+                            type="button"
+                            className="rounded-md p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-800"
+                            title="Editar"
+                            onClick={() => { setEditing(item); setOpen(true); }}
+                          >
+                            <Pencil size={14} />
+                          </button>
+                          <button
+                            type="button"
+                            className="rounded-md p-1.5 text-slate-500 hover:bg-rose-50 hover:text-rose-600"
+                            title="Excluir"
+                            onClick={async () => {
+                              const res = await deleteAction(item.id);
+                              if (res.error) setError(res.error);
+                            }}
+                          >
+                            <Trash2 size={14} />
+                          </button>
                         </div>
                       ) : null}
                     </li>

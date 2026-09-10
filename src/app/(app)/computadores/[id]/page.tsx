@@ -33,16 +33,6 @@ export default async function ComputerDetailPage({ params }: { params: Promise<{
   });
   if (!computer) notFound();
 
-  const [departments, locations, people] = await Promise.all([
-    prisma.departamento.findMany({ orderBy: { sortOrder: "asc" } }),
-    prisma.localizacao.findMany({ orderBy: [{ cidade: "asc" }, { nome: "asc" }] }),
-    prisma.servidor.findMany({
-      where: { ativo: true },
-      orderBy: { nome: "asc" },
-      include: { departamento: true },
-    }),
-  ]);
-
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -58,22 +48,10 @@ export default async function ComputerDetailPage({ params }: { params: Promise<{
             <span>{formatPredio(computer.localizacao) || "Sem prédio"}</span>
           </div>
         </div>
-        {isAdminRole(session?.user?.role) ? (
-          <ComputerDetailActions
-            computer={computer}
-            departments={departments}
-            locations={locations}
-            people={people.map((p) => ({
-              id: p.id,
-              nome: p.nome,
-              departamentoCodigo: p.departamento.codigo,
-              departamentoNome: p.departamento.nome,
-            }))}
-          />
-        ) : null}
+        <ComputerDetailActions computerId={computer.id} isAdmin={isAdminRole(session?.user?.role)} />
       </div>
 
-      <section className="rounded-xl border border-line bg-white p-5">
+      <section className="surface p-5">
         <h2 className="mb-4 text-sm font-semibold">Geral</h2>
         <dl className="grid gap-4 sm:grid-cols-3">
           <Item label="Patrimônio" value={computer.tombo} />
@@ -83,7 +61,7 @@ export default async function ComputerDetailPage({ params }: { params: Promise<{
         </dl>
       </section>
 
-      <section className="rounded-xl border border-line bg-white p-5">
+      <section className="surface p-5">
         <h2 className="mb-4 text-sm font-semibold">Hardware</h2>
         <dl className="grid gap-4 sm:grid-cols-3">
           <Item label="Processador" value={computer.processador} />
@@ -92,16 +70,7 @@ export default async function ComputerDetailPage({ params }: { params: Promise<{
         </dl>
       </section>
 
-      <section className="rounded-xl border border-line bg-white p-5">
-        <h2 className="mb-4 text-sm font-semibold">Sistema</h2>
-        <dl className="grid gap-4 sm:grid-cols-3">
-          <Item label="Sistema operacional" value={computer.sistemaOperacional} />
-          <Item label="Versão" value={computer.soVersao} />
-          <Item label="Arquitetura" value={computer.arquitetura} />
-        </dl>
-      </section>
-
-      <section className="rounded-xl border border-line bg-white p-5">
+      <section className="surface p-5">
         <h2 className="mb-4 text-sm font-semibold">Alocação</h2>
         <dl className="grid gap-4 sm:grid-cols-3">
           <Item label="Usuário" value={computer.usuario} />
@@ -111,14 +80,14 @@ export default async function ComputerDetailPage({ params }: { params: Promise<{
         </dl>
       </section>
 
-      <section className="rounded-xl border border-line bg-white p-5">
+      <section className="surface p-5">
         <h2 className="mb-4 text-sm font-semibold">Periféricos</h2>
         {computer.monitores.length ? (
           <ul className="divide-y divide-line">
             {computer.monitores.map((monitor) => (
               <li key={monitor.id} className="flex items-center justify-between py-3 text-sm">
                 <Link href={`/monitores/${monitor.id}`} className="font-medium text-brand hover:underline">{monitor.tombo}</Link>
-                <span className="text-slate-500">{[monitor.fabricante, monitor.modelo].filter(Boolean).join(" ") || "Monitor"}</span>
+                <span className="text-slate-500">{monitor.modelo || "Monitor"}</span>
                 <StatusBadge status={monitor.status} />
               </li>
             ))}
@@ -128,7 +97,7 @@ export default async function ComputerDetailPage({ params }: { params: Promise<{
         )}
       </section>
 
-      <section className="rounded-xl border border-line bg-white p-5">
+      <section className="surface p-5">
         <h2 className="mb-4 text-sm font-semibold">Histórico</h2>
         <MovementTimeline items={computer.movimentacoes} />
       </section>

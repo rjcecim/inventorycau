@@ -15,8 +15,8 @@ type Item = {
   nome: string;
   nivel: number;
   parentId: string | null;
-  servidores: number;
   computadores: number;
+  monitores: number;
 };
 
 export function SetoresManager({
@@ -41,11 +41,11 @@ export function SetoresManager({
         </div>
       ) : null}
 
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-        <div className="grid grid-cols-[1fr_7rem_8rem_auto] gap-3 border-b border-slate-200 bg-slate-50 px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-slate-500">
+      <div className="surface overflow-hidden">
+        <div className="grid grid-cols-[1fr_8rem_8rem_auto] gap-3 border-b border-slate-200 bg-slate-50 px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-slate-500">
           <span>Lotação</span>
-          <span className="text-right">Usuários</span>
           <span className="text-right">Computadores</span>
+          <span className="text-right">Monitores</span>
           <span className="w-24 text-right">{isAdmin ? "Ações" : ""}</span>
         </div>
         {items.length ? (
@@ -53,7 +53,7 @@ export function SetoresManager({
             {items.map((item) => (
               <li
                 key={item.id}
-                className="grid grid-cols-[1fr_7rem_8rem_auto] items-center gap-3 px-4 py-2.5 text-sm hover:bg-slate-50/80"
+                className="grid grid-cols-[1fr_8rem_8rem_auto] items-center gap-3 px-4 py-2.5 text-sm hover:bg-slate-50/80"
                 style={{ paddingLeft: `${16 + (item.nivel - 1) * 18}px` }}
               >
                 <div className="min-w-0">
@@ -62,8 +62,8 @@ export function SetoresManager({
                     {item.nome}
                   </p>
                 </div>
-                <span className="text-right tabular-nums text-slate-600">{item.servidores}</span>
                 <span className="text-right tabular-nums text-slate-600">{item.computadores}</span>
+                <span className="text-right tabular-nums text-slate-600">{item.monitores}</span>
                 <div className="flex w-24 justify-end gap-1">
                   {isAdmin ? (
                     <>
@@ -106,7 +106,7 @@ export function SetoresManager({
         {removing ? (
           <div className="space-y-4">
             <p className="text-sm text-slate-600">
-              Excluir <strong>{removing.codigo}. {removing.nome}</strong>? Só é permitido se não houver subsetores, usuários ou equipamentos vinculados.
+              Excluir <strong>{removing.codigo}. {removing.nome}</strong>? Só é permitido se não houver subsetores ou equipamentos vinculados.
             </p>
             {error ? <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p> : null}
             <div className="flex gap-2">

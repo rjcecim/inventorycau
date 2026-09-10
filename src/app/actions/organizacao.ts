@@ -67,17 +67,14 @@ export async function saveDepartamento(_: unknown, formData: FormData) {
 
 export async function deleteDepartamento(id: string) {
   await requireAdmin();
-  const [computers, monitors, children, people] = await Promise.all([
+  const [computers, monitors, children] = await Promise.all([
     prisma.computador.count({ where: { departamentoId: id, deletedAt: null } }),
     prisma.monitor.count({ where: { departamentoId: id, deletedAt: null } }),
     prisma.departamento.count({ where: { parentId: id } }),
-    prisma.servidor.count({ where: { departamentoId: id } }),
   ]);
   if (children) return { error: "Remova ou realoque os subsetores antes de excluir." };
   if (computers || monitors) return { error: "Há equipamentos vinculados a este setor." };
-  if (people) return { error: "Há usuários vinculados a este setor." };
   try {
-    await prisma.alocacao.deleteMany({ where: { departamentoId: id } });
     await prisma.departamento.delete({ where: { id } });
     refreshSetores();
     return { success: true };

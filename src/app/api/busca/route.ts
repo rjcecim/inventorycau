@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
         id: item.id,
         type: "Monitor",
         title: item.tombo,
-        subtitle: [item.fabricante, item.modelo, item.usuario].filter(Boolean).join(" · "),
+        subtitle: [item.modelo, item.usuario].filter(Boolean).join(" · "),
         href: `/monitores/${item.id}`,
       })),
     ]);

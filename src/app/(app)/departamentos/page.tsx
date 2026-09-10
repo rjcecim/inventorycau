@@ -14,7 +14,7 @@ export default async function DepartamentosPage() {
       _count: {
         select: {
           computadores: { where: { deletedAt: null } },
-          servidores: { where: { ativo: true } },
+          monitores: { where: { deletedAt: null } },
         },
       },
     },
@@ -24,7 +24,7 @@ export default async function DepartamentosPage() {
     <>
       <PageHeader
         title="Setores"
-        description="Lotações oficiais. A coluna Usuários conta as pessoas cadastradas e ativas em cada setor."
+        description="Lotações oficiais. As colunas Computadores e Monitores contam os equipamentos associados a cada setor."
       />
       <SetoresManager
         isAdmin={isAdminRole(session?.user?.role)}
@@ -34,8 +34,8 @@ export default async function DepartamentosPage() {
           nome: item.nome,
           nivel: item.nivel,
           parentId: item.parentId,
-          servidores: item._count.servidores,
           computadores: item._count.computadores,
+          monitores: item._count.monitores,
         }))}
       />
     </>

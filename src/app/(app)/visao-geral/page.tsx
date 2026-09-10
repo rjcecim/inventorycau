@@ -3,8 +3,12 @@ import { PageHeader } from "@/components/PageHeader";
 import { VisaoGeralTable } from "@/components/VisaoGeralTable";
 import { setorLabel } from "@/lib/alocacao";
 
-function assetModelo(item: { fabricante?: string | null; modelo?: string | null }) {
-  return [item.fabricante, item.modelo].filter(Boolean).join(" ");
+function assetModelo(item: { modelo?: string | null }) {
+  return item.modelo?.trim() || "";
+}
+
+function usuarioLabel(item: { servidor?: { nome: string } | null; usuario?: string | null }) {
+  return item.servidor?.nome || item.usuario || "";
 }
 
 export const dynamic = "force-dynamic";
@@ -20,12 +24,13 @@ export default async function VisaoGeralPage() {
         monitores: {
           where: { deletedAt: null },
           orderBy: { tombo: "asc" },
-          select: { id: true, tombo: true, fabricante: true, modelo: true },
+          select: { id: true, tombo: true, modelo: true },
         },
       },
+      orderBy: { tombo: "asc" },
     }),
     prisma.monitor.findMany({
-      where: { deletedAt: null, computadorId: null, departamentoId: { not: null } },
+      where: { deletedAt: null, computadorId: null },
       include: { departamento: true, localizacao: true, servidor: true },
       orderBy: { tombo: "asc" },
     }),
@@ -38,9 +43,9 @@ export default async function VisaoGeralPage() {
     setor: setorLabel(item.departamento),
     predio: item.localizacao?.nome ?? "",
     computadorTombo: item.tombo,
-    modelo: assetModelo(item),
+    modeloComputador: assetModelo(item),
     status: item.status,
-    usuario: item.servidor?.nome || item.usuario || "",
+    usuario: usuarioLabel(item),
     monitores: item.monitores.map((monitor) => ({
       id: monitor.id,
       tombo: monitor.tombo,
@@ -48,33 +53,18 @@ export default async function VisaoGeralPage() {
     })),
   }));
 
-  const monitorUsuario = (item: (typeof sectorMonitors)[number]) => item.servidor?.nome || item.usuario || "";
-  const monitorUsuarioKey = (item: (typeof sectorMonitors)[number]) => item.servidorId || item.usuario || "sem-usuario";
-
-  const monitorsBySetorPredioUsuario = new Map<string, typeof sectorMonitors>();
-  for (const item of sectorMonitors) {
-    const key = `${item.departamentoId ?? "sem-setor"}::${item.localizacaoId ?? "sem-predio"}::${monitorUsuarioKey(item)}::${item.status}`;
-    const group = monitorsBySetorPredioUsuario.get(key) ?? [];
-    group.push(item);
-    monitorsBySetorPredioUsuario.set(key, group);
-  }
-
-  const monitorRows = Array.from(monitorsBySetorPredioUsuario.values()).map((group) => {
-    const first = group[0];
-    const modelos = [...new Set(group.map(assetModelo).filter(Boolean))];
-    return {
-      id: `setor-mon-${first.departamentoId ?? first.id}-${first.localizacaoId ?? "sem-predio"}-${monitorUsuarioKey(first)}-${first.status}`,
-      kind: "monitor" as const,
-      href: `/monitores/${first.id}`,
-      setor: setorLabel(first.departamento),
-      predio: first.localizacao?.nome ?? "",
-      computadorTombo: "",
-      modelo: modelos.join(", "),
-      status: first.status,
-      usuario: monitorUsuario(first),
-      monitores: group.map((item) => ({ id: item.id, tombo: item.tombo, modelo: assetModelo(item) })),
-    };
-  });
+  const monitorRows = sectorMonitors.map((item) => ({
+    id: `mon-${item.id}`,
+    kind: "monitor" as const,
+    href: `/monitores/${item.id}`,
+    setor: setorLabel(item.departamento),
+    predio: item.localizacao?.nome ?? "",
+    computadorTombo: "",
+    modeloComputador: "",
+    status: item.status,
+    usuario: usuarioLabel(item),
+    monitores: [{ id: item.id, tombo: item.tombo, modelo: assetModelo(item) }],
+  }));
 
   const rows = [...computerRows, ...monitorRows].sort((a, b) => {
     const bySetor = (a.setor || "\uffff").localeCompare(b.setor || "\uffff", "pt-BR");
@@ -82,8 +72,6 @@ export default async function VisaoGeralPage() {
     const byPredio = (a.predio || "\uffff").localeCompare(b.predio || "\uffff", "pt-BR");
     if (byPredio !== 0) return byPredio;
     if (a.kind !== b.kind) return a.kind === "computer" ? -1 : 1;
-    const byUsuario = (a.usuario || "\uffff").localeCompare(b.usuario || "\uffff", "pt-BR");
-    if (byUsuario !== 0) return byUsuario;
     return (a.computadorTombo || a.monitores[0]?.tombo || "").localeCompare(
       b.computadorTombo || b.monitores[0]?.tombo || "",
       "pt-BR",
@@ -95,7 +83,7 @@ export default async function VisaoGeralPage() {
     <>
       <PageHeader
         title="Visão Geral"
-        description="Equipamentos por setor: computadores com seus monitores e monitores alocados somente ao setor."
+        description="Uma linha por equipamento. Use o filtro no cabeçalho de cada coluna, como no Excel."
       />
       <VisaoGeralTable rows={rows} />
     </>

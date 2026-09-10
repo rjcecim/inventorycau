@@ -34,21 +34,6 @@ export default async function MonitorDetailPage({ params }: { params: Promise<{ 
   });
   if (!monitor) notFound();
 
-  const [departments, locations, computers, people] = await Promise.all([
-    prisma.departamento.findMany({ orderBy: { sortOrder: "asc" } }),
-    prisma.localizacao.findMany({ orderBy: [{ cidade: "asc" }, { nome: "asc" }] }),
-    prisma.computador.findMany({
-      where: { deletedAt: null },
-      orderBy: { tombo: "asc" },
-      include: { departamento: true },
-    }),
-    prisma.servidor.findMany({
-      where: { ativo: true },
-      orderBy: { nome: "asc" },
-      include: { departamento: true },
-    }),
-  ]);
-
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -59,26 +44,13 @@ export default async function MonitorDetailPage({ params }: { params: Promise<{ 
           <h1 className="mt-1 text-2xl font-semibold tracking-tight">{monitor.tombo}</h1>
           <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-slate-600">
             <StatusBadge status={monitorAlocacao(monitor).status} />
-            <span>{[monitor.fabricante, monitor.modelo].filter(Boolean).join(" ") || "Modelo não informado"}</span>
+            <span>{monitor.modelo || "Modelo não informado"}</span>
           </div>
         </div>
-        {isAdminRole(session?.user?.role) ? (
-          <MonitorDetailActions
-            monitor={monitor}
-            departments={departments}
-            locations={locations}
-            computers={computers}
-            people={people.map((p) => ({
-              id: p.id,
-              nome: p.nome,
-              departamentoCodigo: p.departamento.codigo,
-              departamentoNome: p.departamento.nome,
-            }))}
-          />
-        ) : null}
+        <MonitorDetailActions monitorId={monitor.id} isAdmin={isAdminRole(session?.user?.role)} />
       </div>
 
-      <section className="rounded-xl border border-line bg-white p-5">
+      <section className="surface p-5">
         <h2 className="mb-4 text-sm font-semibold">Identificação</h2>
         <dl className="grid gap-4 sm:grid-cols-3">
           <Item label="Patrimônio" value={monitor.tombo} />
@@ -91,7 +63,7 @@ export default async function MonitorDetailPage({ params }: { params: Promise<{ 
         </dl>
       </section>
 
-      <section className="rounded-xl border border-line bg-white p-5">
+      <section className="surface p-5">
         <h2 className="mb-4 text-sm font-semibold">Alocação</h2>
         <dl className="grid gap-4 sm:grid-cols-3">
           <Item label="Usuário" value={monitorAlocacao(monitor).usuario} />
@@ -110,7 +82,7 @@ export default async function MonitorDetailPage({ params }: { params: Promise<{ 
         </dl>
       </section>
 
-      <section className="rounded-xl border border-line bg-white p-5">
+      <section className="surface p-5">
         <h2 className="mb-4 text-sm font-semibold">Histórico</h2>
         <MovementTimeline items={monitor.movimentacoes} />
       </section>

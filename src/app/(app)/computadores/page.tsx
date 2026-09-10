@@ -16,34 +16,17 @@ export default async function ComputadoresPage({
   const params = await searchParams;
   const status = params.status as AssetStatus | undefined;
 
-  const [computers, departments, locations, people] = await Promise.all([
-    prisma.computador.findMany({
-      where: { deletedAt: null, ...(status ? { status } : {}) },
-      orderBy: { tombo: "asc" },
-      include: { departamento: true, localizacao: true, _count: { select: { monitores: true } } },
-    }),
-    prisma.departamento.findMany({ orderBy: { sortOrder: "asc" } }),
-    prisma.localizacao.findMany({ orderBy: [{ cidade: "asc" }, { nome: "asc" }] }),
-    prisma.servidor.findMany({
-      where: { ativo: true },
-      orderBy: { nome: "asc" },
-      include: { departamento: true },
-    }),
-  ]);
+  const computers = await prisma.computador.findMany({
+    where: { deletedAt: null, ...(status ? { status } : {}) },
+    orderBy: { tombo: "asc" },
+    include: { departamento: true, localizacao: true, _count: { select: { monitores: true } } },
+  });
 
   return (
     <>
-      <PageHeader title="Computadores" description="Inventário de estações, com filtros por status, setor e prédio." />
+      <PageHeader title="Computadores" description="Inventário de estações. Use o filtro no cabeçalho de cada coluna, como no Excel." />
       <ComputerTable
         computers={computers}
-        departments={departments}
-        locations={locations}
-        people={people.map((p) => ({
-          id: p.id,
-          nome: p.nome,
-          departamentoCodigo: p.departamento.codigo,
-          departamentoNome: p.departamento.nome,
-        }))}
         isAdmin={isAdminRole(session?.user?.role)}
       />
     </>

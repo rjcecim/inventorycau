@@ -44,7 +44,6 @@ model Departamento {
   id            String         @id @default(cuid())
   codigo        String         @unique
   nome          String
-  qtdServidores Int            @default(0) @map("qtd_servidores")
   nivel         Int            @default(1)
   parentId      String?        @map("parent_id")
   parent        Departamento?  @relation("DepartamentoTree", fields: [parentId], references: [id])
@@ -52,10 +51,8 @@ model Departamento {
   sortOrder     Int            @default(0) @map("sort_order")
   createdDate   DateTime       @default(now()) @map("created_date")
   updatedDate   DateTime       @updatedAt @map("updated_date")
-  alocacoes     Alocacao[]
   computadores  Computador[]
   monitores     Monitor[]
-  servidores    Servidor[]
 
   @@index([parentId])
   @@index([sortOrder])
@@ -63,20 +60,15 @@ model Departamento {
 }
 
 model Servidor {
-  id             String        @id @default(cuid())
-  nome           String
-  email          String?
-  matricula      String?       @unique
-  cargo          String?
-  ativo          Boolean       @default(true)
-  departamentoId String        @map("departamento_id")
-  departamento   Departamento  @relation(fields: [departamentoId], references: [id])
-  createdDate    DateTime      @default(now()) @map("created_date")
-  updatedDate    DateTime      @updatedAt @map("updated_date")
-  computadores   Computador[]
-  monitores      Monitor[]
+  id           String       @id @default(cuid())
+  nome         String
+  matricula    String?      @unique
+  cargo        String?
+  createdDate  DateTime     @default(now()) @map("created_date")
+  updatedDate  DateTime     @updatedAt @map("updated_date")
+  computadores Computador[]
+  monitores    Monitor[]
 
-  @@index([departamentoId])
   @@index([nome])
   @@map("servidores")
 }
@@ -86,9 +78,6 @@ model Localizacao {
   nome         String
   cidade       String       @default("")
   uf           String?
-  predio       String?
-  andar        String?
-  sala         String?
   createdDate  DateTime     @default(now()) @map("created_date")
   updatedDate  DateTime     @updatedAt @map("updated_date")
   computadores Computador[]
@@ -109,9 +98,6 @@ model Computador {
   processador         String?
   memoriaRam          String?         @map("memoria_ram")
   armazenamento       String?
-  sistemaOperacional  String?         @map("sistema_operacional")
-  soVersao            String?         @map("so_versao")
-  arquitetura         String?
   observacoes         String?
   usuario             String?
   servidorId          String?         @map("servidor_id")
@@ -123,7 +109,6 @@ model Computador {
   createdDate         DateTime        @default(now()) @map("created_date")
   updatedDate         DateTime        @updatedAt @map("updated_date")
   deletedAt           DateTime?       @map("deleted_at")
-  alocacao            Alocacao?
   monitores           Monitor[]
   movimentacoes       Movimentacao[]
 
@@ -159,7 +144,6 @@ model Monitor {
   createdDate     DateTime        @default(now()) @map("created_date")
   updatedDate     DateTime        @updatedAt @map("updated_date")
   deletedAt       DateTime?       @map("deleted_at")
-  alocacaoMonitor AlocacaoMonitor?
   movimentacoes   Movimentacao[]
 
   @@index([modelo])
@@ -189,33 +173,4 @@ model Movimentacao {
   @@index([computadorId])
   @@index([monitorId])
   @@map("movimentacoes")
-}
-
-/// Registro legado de alocação — preservado para não perder dados.
-/// A aplicação usa os campos diretos em Computador e Monitor.
-model Alocacao {
-  id             String            @id @default(cuid())
-  departamentoId String            @map("departamento_id")
-  departamento   Departamento      @relation(fields: [departamentoId], references: [id])
-  computadorId   String?           @unique @map("computador_id")
-  computador     Computador?       @relation(fields: [computadorId], references: [id])
-  monitores      AlocacaoMonitor[]
-  usuario        String?
-  createdDate    DateTime          @default(now()) @map("created_date")
-  updatedDate    DateTime          @updatedAt @map("updated_date")
-
-  @@index([departamentoId])
-  @@map("alocacoes")
-}
-
-model AlocacaoMonitor {
-  id         String    @id @default(cuid())
-  alocacaoId String    @map("alocacao_id")
-  alocacao   Alocacao  @relation(fields: [alocacaoId], references: [id], onDelete: Cascade)
-  monitorId  String    @unique @map("monitor_id")
-  monitor    Monitor   @relation(fields: [monitorId], references: [id])
-  ordem      Int
-
-  @@unique([alocacaoId, ordem])
-  @@map("alocacao_monitores")
 }

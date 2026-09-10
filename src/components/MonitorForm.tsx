@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import Link from "next/link";
 import type { AssetStatus } from "@prisma/client";
 import { saveMonitor } from "@/app/actions/monitores";
 import { Button } from "@/components/ui/Button";
@@ -11,7 +12,7 @@ import { formatPredio } from "@/lib/predios";
 import { setorLabel } from "@/lib/alocacao";
 
 type Option = { id: string; nome?: string; codigo?: string; tombo?: string; cidade?: string | null; uf?: string | null };
-type PersonOption = { id: string; nome: string; departamentoCodigo: string; departamentoNome: string };
+type PersonOption = { id: string; nome: string; matricula?: string | null };
 type ComputerOption = {
   id: string;
   tombo: string;
@@ -26,6 +27,7 @@ export function MonitorForm({
   locations,
   computers,
   people = [],
+  cancelHref,
   onSuccess,
 }: {
   monitor?: {
@@ -49,14 +51,15 @@ export function MonitorForm({
   locations: Option[];
   computers: ComputerOption[];
   people?: PersonOption[];
-  onSuccess?: () => void;
+  cancelHref?: string;
+  onSuccess?: (id?: string) => void;
 }) {
   const [computadorId, setComputadorId] = useState(monitor?.computadorId ?? "");
   const linkedComputer = computers.find((item) => item.id === computadorId) ?? null;
 
   const [state, action, pending] = useActionState(async (prev: unknown, fd: FormData) => {
     const res = await saveMonitor(prev, fd);
-    if (res.success) onSuccess?.();
+    if (res.success) onSuccess?.(res.id);
     return res;
   }, null);
 
@@ -154,7 +157,7 @@ export function MonitorForm({
               placeholder="Pesquisar usuário…"
               options={people.map((person) => ({
                 id: person.id,
-                label: `${person.nome} (${person.departamentoCodigo}. ${person.departamentoNome})`,
+                label: person.matricula ? `${person.nome} — ${person.matricula}` : person.nome,
               }))}
             />
           </Field>
@@ -165,7 +168,12 @@ export function MonitorForm({
         <TextArea name="observacoes" defaultValue={monitor?.observacoes ?? ""} />
       </Field>
       {state && "error" in state && state.error ? <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">{state.error}</p> : null}
-      <div className="flex justify-end">
+      <div className="flex justify-end gap-2">
+        {cancelHref ? (
+          <Link href={cancelHref} className="inline-flex items-center justify-center rounded-xl bg-white px-3.5 py-2.5 text-sm font-semibold text-slate-700 ring-1 ring-line hover:bg-slate-50">
+            Cancelar
+          </Link>
+        ) : null}
         <Button type="submit" disabled={pending}>{pending ? "Salvando…" : "Salvar"}</Button>
       </div>
     </form>

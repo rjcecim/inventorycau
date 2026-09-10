@@ -14,7 +14,7 @@ export default async function MovimentacoesPage() {
   return (
     <>
       <PageHeader title="Movimentações" description="Histórico de alterações de status, alocação e vínculos." />
-      <div className="rounded-xl border border-line bg-white p-5">
+      <div className="surface p-5">
         <MovementTimeline items={items} showAsset />
       </div>
     </>

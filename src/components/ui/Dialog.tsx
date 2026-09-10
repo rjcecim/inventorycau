@@ -26,7 +26,7 @@ export function Dialog({
     <dialog
       ref={ref}
       onClose={onClose}
-      className="w-[min(560px,calc(100%-2rem))] rounded-xl border border-line bg-white p-0 shadow-2xl backdrop:bg-slate-900/40"
+      className="w-[min(560px,calc(100%-2rem))] rounded-2xl border border-line bg-white p-0 shadow-[0_24px_80px_-20px_rgba(15,23,42,0.35)] backdrop:bg-slate-950/40 backdrop:backdrop-blur-[2px]"
     >
       <div className="flex items-center justify-between border-b border-line px-5 py-4">
         <h2 className="text-base font-semibold text-slate-900">{title}</h2>
