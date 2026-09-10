@@ -32,7 +32,11 @@ services:
       NODE_TLS_REJECT_UNAUTHORIZED: "0"
       AUTH_SECRET: "cau-inventory-dev-secret-change-in-production"
       AUTH_TRUST_HOST: "true"
-    command: sh -c "npm install && npx prisma generate && npx prisma db push && npx prisma db seed && npm run dev"
+      EMAILJS_SERVICE_ID: ${EMAILJS_SERVICE_ID:-}
+      EMAILJS_TEMPLATE_ID: ${EMAILJS_TEMPLATE_ID:-}
+      EMAILJS_PUBLIC_KEY: ${EMAILJS_PUBLIC_KEY:-}
+      EMAILJS_PRIVATE_KEY: ${EMAILJS_PRIVATE_KEY:-}
+    command: sh -c "npm install && npx prisma generate && npx prisma db push --accept-data-loss && npx prisma db seed && npm run dev"
     ports:
       - "3000:3000"
     volumes:

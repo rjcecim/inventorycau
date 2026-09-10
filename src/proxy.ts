@@ -8,19 +8,30 @@ function requestOrigin(req: { headers: Headers; nextUrl: URL }) {
   return `${proto}://${host}`;
 }
 
+const publicPaths = new Set(["/login", "/login/recuperar"]);
+
 export default auth((req) => {
   const isLoggedIn = !!req.auth;
-  const isLoginPage = req.nextUrl.pathname === "/login";
+  const pathname = req.nextUrl.pathname;
   const origin = requestOrigin(req);
+  const isPublic = publicPaths.has(pathname);
 
-  if (!isLoggedIn && !isLoginPage) {
+  if (!isLoggedIn && !isPublic) {
     const loginUrl = new URL("/login", origin);
-    loginUrl.searchParams.set("callbackUrl", req.nextUrl.pathname);
+    loginUrl.searchParams.set("callbackUrl", pathname);
     return NextResponse.redirect(loginUrl);
   }
 
-  if (isLoggedIn && isLoginPage) {
-    return NextResponse.redirect(new URL("/", origin));
+  if (isLoggedIn && pathname === "/login") {
+    const mustChange = Boolean(req.auth?.user?.mustChangePassword);
+    return NextResponse.redirect(new URL(mustChange ? "/conta/senha" : "/", origin));
+  }
+
+  if (isLoggedIn && Boolean(req.auth?.user?.mustChangePassword)) {
+    const allowed = pathname === "/conta/senha" || pathname.startsWith("/api/auth");
+    if (!allowed) {
+      return NextResponse.redirect(new URL("/conta/senha", origin));
+    }
   }
 
   return NextResponse.next();

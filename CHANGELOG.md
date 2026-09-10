@@ -5,6 +5,29 @@ Alterações pequenas, correções e ajustes mantêm a mesma versão e increment
 `X.Y.Z` muda somente quando houver mudança funcional relevante ou significativa.
 O número do Build é sequencial e não reinicia quando `X.Y.Z` avança.
 
+## 1.2.0 (Build 5)
+
+Gestão de contas de acesso: administração, perfil do usuário, senha temporária e recuperação por e-mail.
+
+### Adicionado
+
+- Administração de contas (Sistema → Contas) para criar, editar, redefinir senha e excluir usuários de login
+- Tela Minha conta para atualizar nome, e-mail e trocar senha com a senha atual
+- Recuperação de senha em `/login/recuperar` com código OTP enviado por e-mail (EmailJS)
+- Troca obrigatória de senha no primeiro acesso quando a conta é criada ou a senha é redefinida pelo admin
+- Campos de conta: e-mail de contato, flag de troca obrigatória e armazenamento de OTP
+
+### Alterado
+
+- Seed passa a criar apenas a conta inicial `admin`, sem recriar prédios, setores ou conta demo `user`
+- Logout redireciona pelo host do navegador, evitando `0.0.0.0` no Docker
+- Login com senha temporária envia direto para a troca obrigatória de senha
+
+### Corrigido
+
+- Sessão JWT atualizada após troca de senha obrigatória, com feedback de sucesso e entrada no sistema
+- Envio de OTP pelo servidor usando chave privada do EmailJS (configuração via variáveis de ambiente)
+
 ## 1.1.0 (Build 4)
 
 Cadastro de prédios do órgão, com cidade e UF, e associação de equipamentos a setor e prédio.

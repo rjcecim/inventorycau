@@ -28,14 +28,18 @@ enum AssetKind {
 }
 
 model User {
-  id            String          @id @default(cuid())
-  email         String          @unique
-  passwordHash  String          @map("password_hash")
-  fullName      String          @map("full_name")
-  role          Role            @default(USER)
-  createdDate   DateTime        @default(now()) @map("created_date")
-  updatedDate   DateTime        @updatedAt @map("updated_date")
-  movimentacoes Movimentacao[]
+  id                  String          @id @default(cuid())
+  email               String          @unique
+  contactEmail        String?         @unique @map("contact_email")
+  passwordHash        String          @map("password_hash")
+  fullName            String          @map("full_name")
+  role                Role            @default(USER)
+  mustChangePassword  Boolean         @default(false) @map("must_change_password")
+  otpHash             String?         @map("otp_hash")
+  otpExpiresAt        DateTime?       @map("otp_expires_at")
+  createdDate         DateTime        @default(now()) @map("created_date")
+  updatedDate         DateTime        @updatedAt @map("updated_date")
+  movimentacoes       Movimentacao[]
 
   @@map("users")
 }

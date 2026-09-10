@@ -13,11 +13,13 @@ import {
   ArrowLeftRight,
   BarChart3,
   Users,
+  UserRound,
+  KeyRound,
   LogOut,
   PanelLeftClose,
   PanelLeftOpen,
 } from "lucide-react";
-import { signOut } from "next-auth/react";
+import { logout } from "@/lib/logout";
 import { cn } from "@/lib/utils";
 
 const STORAGE_KEY = "cau-sidebar-collapsed";
@@ -54,6 +56,9 @@ const groups = [
   },
 ];
 
+const accountItem = { href: "/conta", icon: UserRound, label: "Minha conta" };
+const adminAccountItem = { href: "/contas", icon: KeyRound, label: "Contas" };
+
 function isActive(pathname: string, href: string) {
   if (href === "/") return pathname === "/";
   return pathname === href || pathname.startsWith(`${href}/`);
@@ -76,6 +81,9 @@ export function Sidebar({ userName, userRole }: { userName?: string | null; user
   }
 
   const initial = (userName ?? "U").trim().charAt(0).toUpperCase() || "U";
+  const navGroups = userRole === "ADMIN"
+    ? [...groups, { label: "Sistema", items: [adminAccountItem, accountItem] }]
+    : [...groups, { label: "Sistema", items: [accountItem] }];
 
   return (
     <aside
@@ -111,7 +119,7 @@ export function Sidebar({ userName, userRole }: { userName?: string | null; user
         </button>
       </div>
       <nav className={cn("relative flex-1 overflow-y-auto pb-4", collapsed ? "px-2" : "px-3")}>
-        {groups.map((group) => (
+        {navGroups.map((group) => (
           <div key={group.label} className={collapsed ? "mb-2" : "mb-5"}>
             {collapsed ? (
               <p className="sr-only">{group.label}</p>
@@ -147,18 +155,18 @@ export function Sidebar({ userName, userRole }: { userName?: string | null; user
       </nav>
       <div className={cn("relative border-t border-white/10 py-4", collapsed ? "flex flex-col items-center gap-2 px-2" : "flex items-center gap-2 px-4")}>
         {collapsed ? (
-          <div className="grid h-8 w-8 place-items-center rounded-full bg-white/10 text-xs font-semibold text-white" title={userName ?? "Usuário"}>
+          <Link href="/conta" className="grid h-8 w-8 place-items-center rounded-full bg-white/10 text-xs font-semibold text-white" title="Minha conta">
             {initial}
-          </div>
+          </Link>
         ) : (
-          <div className="min-w-0 flex-1">
+          <Link href="/conta" className="min-w-0 flex-1 rounded-lg px-1 py-0.5 hover:bg-white/5">
             <p className="truncate text-sm font-medium text-white">{userName}</p>
             <p className="text-xs text-slate-500">{userRole === "ADMIN" ? "Administrador" : "Usuário"}</p>
-          </div>
+          </Link>
         )}
         <button
           type="button"
-          onClick={() => signOut({ callbackUrl: "/login" })}
+          onClick={() => void logout()}
           className="rounded-md p-2 text-slate-400 hover:bg-white/10 hover:text-white"
           title="Sair"
         >

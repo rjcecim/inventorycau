@@ -1,12 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { signIn } from "next-auth/react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { AlertCircle, Eye, EyeOff, Loader2, Lock, User } from "lucide-react";
 
 export default function LoginPage() {
-  const router = useRouter();
   const params = useSearchParams();
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -26,13 +26,15 @@ export default function LoginPage() {
       password: fd.get("password"),
       redirect: false,
     });
-    setLoading(false);
     if (res?.error) {
+      setLoading(false);
       setError("Usuário ou senha inválidos. Verifique os dados e tente novamente.");
       return;
     }
-    router.push(callbackUrl || "/");
-    router.refresh();
+    const sessionRes = await fetch("/api/auth/session");
+    const session = (await sessionRes.json()) as { user?: { mustChangePassword?: boolean } };
+    const dest = session.user?.mustChangePassword ? "/conta/senha" : callbackUrl || "/";
+    window.location.replace(dest);
   }
 
   return (
@@ -130,6 +132,9 @@ export default function LoginPage() {
             "Acessar sistema"
           )}
         </button>
+        <Link href="/login/recuperar" className="text-center text-sm font-medium text-brand hover:underline">
+          Esqueci a senha
+        </Link>
       </form>
     </div>
   );
