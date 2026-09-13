@@ -2,11 +2,14 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { AttentionList } from "@/components/AttentionList";
 import { DistributionCard, StatusSplitCard } from "@/components/DistributionCard";
+import { GarantiasDashboardCard, ModernizacaoDashboardCard } from "@/components/LifecycleDashboard";
 import { MovementTimeline } from "@/components/MovementTimeline";
 import { statusLabel, STATUS_ORDER } from "@/lib/status";
 import { PageHeader } from "@/components/PageHeader";
 import { formatPredio } from "@/lib/predios";
 import { setorLabel } from "@/lib/alocacao";
+import { computeWarranty } from "@/lib/garantia";
+import { buildModernizationIndexes } from "@/lib/modernizacao";
 import type { AssetStatus } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
@@ -17,6 +20,10 @@ function countStatus(rows: { status: AssetStatus; _count: { _all: number } }[], 
 
 function bump(map: Map<string, number>, key: string) {
   map.set(key, (map.get(key) ?? 0) + 1);
+}
+
+function emptyWarrantyCounts() {
+  return { vigente: 0, vence90: 0, vencida: 0, incompleto: 0 };
 }
 
 export default async function DashboardPage() {
@@ -36,6 +43,8 @@ export default async function DashboardPage() {
     pcsSemMonitor,
     monitoresSemAlocacao,
     monitorsForDist,
+    computersLifecycle,
+    monitorsLifecycle,
   ] = await Promise.all([
     prisma.computador.groupBy({ by: ["status"], where, _count: { _all: true } }),
     prisma.monitor.groupBy({ by: ["status"], where, _count: { _all: true } }),
@@ -73,6 +82,42 @@ export default async function DashboardPage() {
         },
       },
     }),
+    prisma.computador.findMany({
+      where,
+      select: { dataRecebimento: true, prazoGarantiaAnos: true },
+    }),
+    prisma.monitor.findMany({
+      where,
+      select: { dataRecebimento: true, prazoGarantiaAnos: true },
+    }),
+  ]);
+
+  const pcWarranty = emptyWarrantyCounts();
+  const monWarranty = emptyWarrantyCounts();
+  for (const item of computersLifecycle) {
+    const w = computeWarranty({
+      dataRecebimento: item.dataRecebimento,
+      prazoGarantiaAnos: item.prazoGarantiaAnos,
+    });
+    if (w.situation === "vigente") pcWarranty.vigente += 1;
+    else if (w.situation === "vence_90") pcWarranty.vence90 += 1;
+    else if (w.situation === "vencida") pcWarranty.vencida += 1;
+    else pcWarranty.incompleto += 1;
+  }
+  for (const item of monitorsLifecycle) {
+    const w = computeWarranty({
+      dataRecebimento: item.dataRecebimento,
+      prazoGarantiaAnos: item.prazoGarantiaAnos,
+    });
+    if (w.situation === "vigente") monWarranty.vigente += 1;
+    else if (w.situation === "vence_90") monWarranty.vence90 += 1;
+    else if (w.situation === "vencida") monWarranty.vencida += 1;
+    else monWarranty.incompleto += 1;
+  }
+
+  const modernizationIndexes = buildModernizationIndexes([
+    ...computersLifecycle.map((item) => ({ kind: "COMPUTER" as const, dataRecebimento: item.dataRecebimento })),
+    ...monitorsLifecycle.map((item) => ({ kind: "MONITOR" as const, dataRecebimento: item.dataRecebimento })),
   ]);
 
   const computerTotal = computerStatus.reduce((sum, row) => sum + row._count._all, 0);
@@ -85,9 +130,7 @@ export default async function DashboardPage() {
     countStatus(computerStatus, "AWAITING_INSTALL") +
     countStatus(monitorStatus, "AWAITING_INSTALL");
 
-  const deptMap = Object.fromEntries(
-    departments.map((d) => [d.id, setorLabel(d) || d.nome]),
-  );
+  const deptMap = Object.fromEntries(departments.map((d) => [d.id, setorLabel(d) || d.nome]));
   const locMap = Object.fromEntries(locations.map((d) => [d.id, formatPredio(d)]));
 
   const monitorByDept = new Map<string, number>();
@@ -181,6 +224,20 @@ export default async function DashboardPage() {
             {kpi.hint ? <p className="mt-1 text-[11px] text-slate-400">{kpi.hint}</p> : null}
           </Link>
         ))}
+      </div>
+
+      <div className="mb-6 grid gap-4 lg:grid-cols-2">
+        <GarantiasDashboardCard
+          vigente={
+            pcWarranty.vigente + pcWarranty.vence90 + monWarranty.vigente + monWarranty.vence90
+          }
+          vence90={pcWarranty.vence90 + monWarranty.vence90}
+          vencida={pcWarranty.vencida + monWarranty.vencida}
+          incompleto={pcWarranty.incompleto + monWarranty.incompleto}
+          pc={pcWarranty}
+          mon={monWarranty}
+        />
+        <ModernizacaoDashboardCard indexes={modernizationIndexes} />
       </div>
 
       <div className="mb-6 grid gap-4 lg:grid-cols-3">

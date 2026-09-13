@@ -57,7 +57,7 @@ export function ComputerTable({
   isAdmin: boolean;
 }) {
   const router = useRouter();
-  const getCell = useCallback(cell, []);
+  const getCell = useCallback((row: Row, col: Col) => cell(row, col), []);
   const { filtered, filters, unique, apply, hasFilter, clear, setSort } = useExcelFilters(computers, getCell);
 
   return (

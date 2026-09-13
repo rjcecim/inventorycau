@@ -7,6 +7,9 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 import { ComputerDetailActions } from "@/components/ComputerDetailActions";
 import { MovementTimeline } from "@/components/MovementTimeline";
 import { formatPredio } from "@/lib/predios";
+import { computeWarranty } from "@/lib/garantia";
+import { computeModernization } from "@/lib/modernizacao";
+import { formatCalendarDate, formatDbDate } from "@/lib/dates";
 
 export const dynamic = "force-dynamic";
 
@@ -32,6 +35,14 @@ export default async function ComputerDetailPage({ params }: { params: Promise<{
     },
   });
   if (!computer) notFound();
+  const warranty = computeWarranty({
+    dataRecebimento: computer.dataRecebimento,
+    prazoGarantiaAnos: computer.prazoGarantiaAnos,
+  });
+  const modernization = computeModernization({
+    kind: "COMPUTER",
+    dataRecebimento: computer.dataRecebimento,
+  });
 
   return (
     <div className="space-y-6">
@@ -67,6 +78,22 @@ export default async function ComputerDetailPage({ params }: { params: Promise<{
           <Item label="Processador" value={computer.processador} />
           <Item label="Memória RAM" value={computer.memoriaRam} />
           <Item label="Armazenamento" value={computer.armazenamento} />
+        </dl>
+      </section>
+
+      <section className="surface p-5">
+        <h2 className="mb-4 text-sm font-semibold">Aquisição e garantia</h2>
+        <dl className="grid gap-4 sm:grid-cols-3">
+          <Item label="Data da nota fiscal" value={formatDbDate(computer.dataNotaFiscal)} />
+          <Item label="Data de entrada/recebimento" value={formatDbDate(computer.dataRecebimento)} />
+          <Item
+            label="Prazo de garantia"
+            value={computer.prazoGarantiaAnos == null ? null : `${computer.prazoGarantiaAnos} ano(s)`}
+          />
+          <Item label="Vencimento da garantia" value={formatCalendarDate(warranty.expiresAt)} />
+          <Item label="Situação da garantia" value={`${warranty.situationLabel}${warranty.daysLabel !== "—" ? ` · ${warranty.daysLabel}` : ""}`} />
+          <Item label="Limite de modernização" value={formatCalendarDate(modernization.deadline)} />
+          <Item label="Situação da modernização" value={`${modernization.situationLabel}${modernization.daysLabel !== "—" ? ` · ${modernization.daysLabel}` : ""}`} />
         </dl>
       </section>
 

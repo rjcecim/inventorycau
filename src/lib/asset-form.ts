@@ -16,6 +16,9 @@ export function toComputerFormValues(computer: {
   servidorId: string | null;
   departamentoId: string | null;
   localizacaoId: string | null;
+  dataNotaFiscal?: Date | string | null;
+  dataRecebimento?: Date | string | null;
+  prazoGarantiaAnos?: number | null;
 }) {
   return {
     id: computer.id,
@@ -32,6 +35,9 @@ export function toComputerFormValues(computer: {
     servidorId: computer.servidorId,
     departamentoId: computer.departamentoId,
     localizacaoId: computer.localizacaoId,
+    dataNotaFiscal: computer.dataNotaFiscal ?? null,
+    dataRecebimento: computer.dataRecebimento ?? null,
+    prazoGarantiaAnos: computer.prazoGarantiaAnos ?? null,
   };
 }
 
@@ -51,6 +57,9 @@ export function toMonitorFormValues(monitor: {
   departamentoId: string | null;
   localizacaoId: string | null;
   computadorId: string | null;
+  dataNotaFiscal?: Date | string | null;
+  dataRecebimento?: Date | string | null;
+  prazoGarantiaAnos?: number | null;
 }) {
   return {
     id: monitor.id,
@@ -68,6 +77,9 @@ export function toMonitorFormValues(monitor: {
     departamentoId: monitor.departamentoId,
     localizacaoId: monitor.localizacaoId,
     computadorId: monitor.computadorId,
+    dataNotaFiscal: monitor.dataNotaFiscal ?? null,
+    dataRecebimento: monitor.dataRecebimento ?? null,
+    prazoGarantiaAnos: monitor.prazoGarantiaAnos ?? null,
   };
 }
 

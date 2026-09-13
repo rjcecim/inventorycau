@@ -8,6 +8,7 @@ import { logChanges } from "@/lib/audit";
 import { prisma } from "@/lib/prisma";
 import { emptyToNull } from "@/lib/utils";
 import { formatPredio } from "@/lib/predios";
+import { parseAcquisitionFromForm } from "@/lib/acquisition-form";
 
 const schema = z.object({
   id: z.string().optional(),
@@ -59,6 +60,8 @@ function refresh() {
   revalidatePath("/monitores");
   revalidatePath("/movimentacoes");
   revalidatePath("/relatorios");
+  revalidatePath("/relatorios/garantias");
+  revalidatePath("/relatorios/modernizacao");
   revalidatePath("/visao-geral");
 }
 
@@ -66,7 +69,12 @@ export async function saveMonitor(_: unknown, formData: FormData) {
   const session = await requireAdmin();
   const parsed = fromForm(formData);
   if (!parsed.success) return { error: parsed.error.issues[0].message };
+  const acquisition = parseAcquisitionFromForm(formData);
+  if (acquisition.error || !acquisition.data) {
+    return { error: acquisition.error ?? "Dados de aquisição inválidos." };
+  }
   const data = parsed.data;
+  const acq = acquisition.data;
 
   try {
     const computador = data.computadorId
@@ -116,6 +124,9 @@ export async function saveMonitor(_: unknown, formData: FormData) {
             departamentoId,
             localizacaoId,
             computadorId: data.computadorId,
+            dataNotaFiscal: acq.dataNotaFiscal,
+            dataRecebimento: acq.dataRecebimento,
+            prazoGarantiaAnos: acq.prazoGarantiaAnos,
           },
         });
         await logChanges({
@@ -150,6 +161,9 @@ export async function saveMonitor(_: unknown, formData: FormData) {
           departamentoId,
           localizacaoId,
           computadorId: data.computadorId,
+          dataNotaFiscal: acq.dataNotaFiscal,
+          dataRecebimento: acq.dataRecebimento,
+          prazoGarantiaAnos: acq.prazoGarantiaAnos,
         },
       });
       await logChanges({

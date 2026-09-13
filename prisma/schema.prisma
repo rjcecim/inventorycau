@@ -40,6 +40,7 @@ model User {
   createdDate         DateTime        @default(now()) @map("created_date")
   updatedDate         DateTime        @updatedAt @map("updated_date")
   movimentacoes       Movimentacao[]
+  apuracoesModernizacao ApuracaoModernizacao[]
 
   @@map("users")
 }
@@ -110,6 +111,9 @@ model Computador {
   departamento        Departamento?   @relation(fields: [departamentoId], references: [id])
   localizacaoId       String?         @map("localizacao_id")
   localizacao         Localizacao?    @relation(fields: [localizacaoId], references: [id])
+  dataNotaFiscal      DateTime?       @map("data_nota_fiscal") @db.Date
+  dataRecebimento     DateTime?       @map("data_recebimento") @db.Date
+  prazoGarantiaAnos   Int?            @map("prazo_garantia_anos")
   createdDate         DateTime        @default(now()) @map("created_date")
   updatedDate         DateTime        @updatedAt @map("updated_date")
   deletedAt           DateTime?       @map("deleted_at")
@@ -122,33 +126,37 @@ model Computador {
   @@index([localizacaoId])
   @@index([servidorId])
   @@index([fabricante])
+  @@index([dataRecebimento])
   @@map("computadores")
 }
 
 model Monitor {
-  id              String          @id @default(cuid())
-  tombo           String          @unique
-  serialNumber    String?         @unique @map("serial_number")
-  fabricante      String?
-  modelo          String?
-  tamanho         String?
-  resolucao       String?
-  conexoes        String?
-  status          AssetStatus     @default(AVAILABLE)
-  observacoes     String?
-  usuario         String?
-  servidorId      String?         @map("servidor_id")
-  servidor        Servidor?       @relation(fields: [servidorId], references: [id])
-  departamentoId  String?         @map("departamento_id")
-  departamento    Departamento?   @relation(fields: [departamentoId], references: [id])
-  localizacaoId   String?         @map("localizacao_id")
-  localizacao     Localizacao?    @relation(fields: [localizacaoId], references: [id])
-  computadorId    String?         @map("computador_id")
-  computador      Computador?     @relation(fields: [computadorId], references: [id])
-  createdDate     DateTime        @default(now()) @map("created_date")
-  updatedDate     DateTime        @updatedAt @map("updated_date")
-  deletedAt       DateTime?       @map("deleted_at")
-  movimentacoes   Movimentacao[]
+  id                String          @id @default(cuid())
+  tombo             String          @unique
+  serialNumber      String?         @unique @map("serial_number")
+  fabricante        String?
+  modelo            String?
+  tamanho           String?
+  resolucao         String?
+  conexoes          String?
+  status            AssetStatus     @default(AVAILABLE)
+  observacoes       String?
+  usuario           String?
+  servidorId        String?         @map("servidor_id")
+  servidor          Servidor?       @relation(fields: [servidorId], references: [id])
+  departamentoId    String?         @map("departamento_id")
+  departamento      Departamento?   @relation(fields: [departamentoId], references: [id])
+  localizacaoId     String?         @map("localizacao_id")
+  localizacao       Localizacao?    @relation(fields: [localizacaoId], references: [id])
+  computadorId      String?         @map("computador_id")
+  computador        Computador?     @relation(fields: [computadorId], references: [id])
+  dataNotaFiscal    DateTime?       @map("data_nota_fiscal") @db.Date
+  dataRecebimento   DateTime?       @map("data_recebimento") @db.Date
+  prazoGarantiaAnos Int?            @map("prazo_garantia_anos")
+  createdDate       DateTime        @default(now()) @map("created_date")
+  updatedDate       DateTime        @updatedAt @map("updated_date")
+  deletedAt         DateTime?       @map("deleted_at")
+  movimentacoes     Movimentacao[]
 
   @@index([modelo])
   @@index([status])
@@ -156,6 +164,7 @@ model Monitor {
   @@index([computadorId])
   @@index([servidorId])
   @@index([fabricante])
+  @@index([dataRecebimento])
   @@map("monitores")
 }
 
@@ -177,4 +186,20 @@ model Movimentacao {
   @@index([computadorId])
   @@index([monitorId])
   @@map("movimentacoes")
+}
+
+model ApuracaoModernizacao {
+  id             String   @id @default(cuid())
+  ano            Int      @unique
+  dataReferencia DateTime @map("data_referencia") @db.Date
+  escopo         String   @default("computadores_e_monitores")
+  resultado      Json
+  equipamentos   Json
+  observacao     String?
+  createdById    String?  @map("created_by_id")
+  createdBy      User?    @relation(fields: [createdById], references: [id])
+  createdDate    DateTime @default(now()) @map("created_date")
+
+  @@index([ano])
+  @@map("apuracoes_modernizacao")
 }

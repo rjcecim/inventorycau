@@ -5,6 +5,28 @@ Alterações pequenas, correções e ajustes mantêm a mesma versão e increment
 `X.Y.Z` muda somente quando houver mudança funcional relevante ou significativa.
 O número do Build é sequencial e não reinicia quando `X.Y.Z` avança.
 
+## 1.3.0 (Build 6)
+
+Controle de aquisição, garantia e modernização de computadores e monitores, com indicadores no dashboard e relatórios próprios.
+
+### Adicionado
+
+- Seção “Aquisição e garantia” no cadastro e na ficha de computadores e monitores (nota fiscal, recebimento e prazo em anos)
+- Cálculo compartilhado de garantia (vencimento, dias restantes e situações) e de modernização (PC 6 anos · monitores 8 anos)
+- Indicadores de garantias e índices de modernização por categoria no dashboard, com links filtrados aos relatórios
+- Relatórios de Garantias e Modernização com filtros, totais, exportação CSV, impressão e filtros estilo Excel nas tabelas
+- Apuração anual de modernização com snapshot imutável (data de referência, equipamentos e resultados)
+- Modelo `ApuracaoModernizacao` e campos de aquisição em `Computador` e `Monitor`
+
+### Alterado
+
+- Formulários, actions e detalhes passam a gravar e exibir dados de aquisição sem herança monitor ← computador
+- Página de relatórios ganha atalhos para Garantias e Modernização
+
+### Corrigido
+
+- Ajustes de lint em filtros de tabela, busca global, menu lateral e SearchSelect (incluindo `aria-controls` no combobox)
+
 ## 1.2.0 (Build 5)
 
 Gestão de contas de acesso: administração, perfil do usuário, senha temporária e recuperação por e-mail.

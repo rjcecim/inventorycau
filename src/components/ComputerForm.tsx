@@ -9,6 +9,7 @@ import { Field, TextArea, TextInput } from "@/components/ui/Field";
 import { SearchSelect } from "@/components/ui/SearchSelect";
 import { STATUS_OPTIONS } from "@/lib/status";
 import { formatPredio } from "@/lib/predios";
+import { AcquisitionFields } from "@/components/AcquisitionFields";
 
 type Option = { id: string; nome: string; codigo?: string; cidade?: string | null; uf?: string | null };
 type PersonOption = { id: string; nome: string; matricula?: string | null };
@@ -36,6 +37,9 @@ export function ComputerForm({
     servidorId: string | null;
     departamentoId: string | null;
     localizacaoId: string | null;
+    dataNotaFiscal?: string | Date | null;
+    dataRecebimento?: string | Date | null;
+    prazoGarantiaAnos?: number | null;
   };
   departments: Option[];
   locations: Option[];
@@ -118,6 +122,14 @@ export function ComputerForm({
         <Field label="Memória RAM"><TextInput name="memoriaRam" defaultValue={computer?.memoriaRam ?? ""} placeholder="16 GB" /></Field>
         <Field label="Armazenamento"><TextInput name="armazenamento" defaultValue={computer?.armazenamento ?? ""} placeholder="512 GB SSD" /></Field>
       </div>
+      <AcquisitionFields
+        kind="COMPUTER"
+        values={{
+          dataNotaFiscal: computer?.dataNotaFiscal,
+          dataRecebimento: computer?.dataRecebimento,
+          prazoGarantiaAnos: computer?.prazoGarantiaAnos,
+        }}
+      />
       <Field label="Observações">
         <TextArea name="observacoes" defaultValue={computer?.observacoes ?? ""} />
       </Field>

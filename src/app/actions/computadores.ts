@@ -8,6 +8,7 @@ import { logChanges } from "@/lib/audit";
 import { prisma } from "@/lib/prisma";
 import { emptyToNull } from "@/lib/utils";
 import { formatPredio } from "@/lib/predios";
+import { parseAcquisitionFromForm } from "@/lib/acquisition-form";
 
 const statusEnum = z.enum([
   "IN_USE",
@@ -59,6 +60,8 @@ function refresh() {
   revalidatePath("/monitores");
   revalidatePath("/movimentacoes");
   revalidatePath("/relatorios");
+  revalidatePath("/relatorios/garantias");
+  revalidatePath("/relatorios/modernizacao");
   revalidatePath("/departamentos");
   revalidatePath("/visao-geral");
 }
@@ -67,8 +70,13 @@ export async function saveComputador(_: unknown, formData: FormData) {
   const session = await requireAdmin();
   const parsed = fromForm(formData);
   if (!parsed.success) return { error: parsed.error.issues[0].message };
+  const acquisition = parseAcquisitionFromForm(formData);
+  if (acquisition.error || !acquisition.data) {
+    return { error: acquisition.error ?? "Dados de aquisição inválidos." };
+  }
 
   const data = parsed.data;
+  const acq = acquisition.data;
   try {
     const servidor = data.servidorId
       ? await prisma.servidor.findUnique({ where: { id: data.servidorId } })
@@ -108,6 +116,9 @@ export async function saveComputador(_: unknown, formData: FormData) {
             servidorId: data.servidorId,
             departamentoId,
             localizacaoId: data.localizacaoId,
+            dataNotaFiscal: acq.dataNotaFiscal,
+            dataRecebimento: acq.dataRecebimento,
+            prazoGarantiaAnos: acq.prazoGarantiaAnos,
           },
         });
         await tx.monitor.updateMany({
@@ -150,6 +161,9 @@ export async function saveComputador(_: unknown, formData: FormData) {
           servidorId: data.servidorId,
           departamentoId,
           localizacaoId: data.localizacaoId,
+          dataNotaFiscal: acq.dataNotaFiscal,
+          dataRecebimento: acq.dataRecebimento,
+          prazoGarantiaAnos: acq.prazoGarantiaAnos,
         },
       });
       await logChanges({

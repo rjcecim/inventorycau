@@ -10,6 +10,7 @@ import { SearchSelect } from "@/components/ui/SearchSelect";
 import { STATUS_OPTIONS, statusLabel } from "@/lib/status";
 import { formatPredio } from "@/lib/predios";
 import { setorLabel } from "@/lib/alocacao";
+import { AcquisitionFields } from "@/components/AcquisitionFields";
 
 type Option = { id: string; nome?: string; codigo?: string; tombo?: string; cidade?: string | null; uf?: string | null };
 type PersonOption = { id: string; nome: string; matricula?: string | null };
@@ -46,6 +47,9 @@ export function MonitorForm({
     departamentoId: string | null;
     localizacaoId: string | null;
     computadorId: string | null;
+    dataNotaFiscal?: string | Date | null;
+    dataRecebimento?: string | Date | null;
+    prazoGarantiaAnos?: number | null;
   };
   departments: Option[];
   locations: Option[];
@@ -163,6 +167,15 @@ export function MonitorForm({
           </Field>
         </div>
       )}
+
+      <AcquisitionFields
+        kind="MONITOR"
+        values={{
+          dataNotaFiscal: monitor?.dataNotaFiscal,
+          dataRecebimento: monitor?.dataRecebimento,
+          prazoGarantiaAnos: monitor?.prazoGarantiaAnos,
+        }}
+      />
 
       <Field label="Observações">
         <TextArea name="observacoes" defaultValue={monitor?.observacoes ?? ""} />

@@ -96,6 +96,26 @@ export default async function RelatoriosPage({
   return (
     <>
       <PageHeader title="Relatórios" description="Recortes rápidos do inventário para operação e conferência." />
+      <div className="mb-4 grid gap-3 sm:grid-cols-2">
+        <Link
+          href="/relatorios/garantias"
+          className="surface block p-4 transition hover:border-slate-300 hover:bg-slate-50"
+        >
+          <p className="text-sm font-semibold text-slate-900">Garantias</p>
+          <p className="mt-1 text-xs text-slate-500">
+            Vencimento, dias restantes e situação por equipamento (PC e monitores).
+          </p>
+        </Link>
+        <Link
+          href="/relatorios/modernizacao"
+          className="surface block p-4 transition hover:border-slate-300 hover:bg-slate-50"
+        >
+          <p className="text-sm font-semibold text-slate-900">Modernização</p>
+          <p className="mt-1 text-xs text-slate-500">
+            Índices por categoria, prazos de 6/8 anos e apurações anuais salvas.
+          </p>
+        </Link>
+      </div>
       <div className="mb-4 flex flex-wrap gap-2">
         {reports.map((item) => (
           <Link

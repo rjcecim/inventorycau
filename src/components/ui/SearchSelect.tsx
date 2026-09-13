@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState, startTransition } from "react";
 import { ChevronDown } from "lucide-react";
 import { inputClass } from "@/components/ui/Field";
 import { cn } from "@/lib/utils";
@@ -40,6 +40,7 @@ export function SearchSelect({
   className?: string;
 }) {
   const rootRef = useRef<HTMLDivElement>(null);
+  const listboxId = useId();
   const isControlled = valueProp !== undefined;
   const [internal, setInternal] = useState(defaultValue);
   const value = isControlled ? valueProp : internal;
@@ -67,7 +68,7 @@ export function SearchSelect({
 
   useEffect(() => {
     if (open) return;
-    setQuery(selectedLabel);
+    startTransition(() => setQuery(selectedLabel));
   }, [open, selectedLabel]);
 
   useEffect(() => {
@@ -87,7 +88,7 @@ export function SearchSelect({
   });
 
   useEffect(() => {
-    setActive(0);
+    startTransition(() => setActive(0));
   }, [query, open]);
 
   function choose(option: SearchSelectOption) {
@@ -104,6 +105,7 @@ export function SearchSelect({
           type="text"
           role="combobox"
           aria-expanded={open}
+          aria-controls={listboxId}
           aria-autocomplete="list"
           autoComplete="off"
           className={cn(inputClass, "pr-8")}
@@ -140,6 +142,7 @@ export function SearchSelect({
       </div>
       {open ? (
         <ul
+          id={listboxId}
           role="listbox"
           className="absolute z-50 mt-1.5 max-h-56 w-full overflow-y-auto rounded-xl border border-line bg-white py-1 shadow-[0_16px_40px_-16px_rgba(15,23,42,0.28)]"
         >

@@ -51,8 +51,8 @@ export function GlobalSearch() {
 
   useEffect(() => {
     if (!open) return;
-    setLoading(true);
     const handle = setTimeout(async () => {
+      setLoading(true);
       const res = await fetch(`/api/busca?q=${encodeURIComponent(query)}`);
       if (res.ok) {
         const data = (await res.json()) as Result[];
