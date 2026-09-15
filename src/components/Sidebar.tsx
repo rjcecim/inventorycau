@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useSyncExternalStore } from "react";
 import {
   LayoutDashboard,
   Table2,
@@ -23,6 +23,28 @@ import { logout } from "@/lib/logout";
 import { cn } from "@/lib/utils";
 
 const STORAGE_KEY = "cau-sidebar-collapsed";
+const collapsedListeners = new Set<() => void>();
+
+function subscribeCollapsed(onStoreChange: () => void) {
+  collapsedListeners.add(onStoreChange);
+  window.addEventListener("storage", onStoreChange);
+  return () => {
+    collapsedListeners.delete(onStoreChange);
+    window.removeEventListener("storage", onStoreChange);
+  };
+}
+
+function getCollapsedSnapshot() {
+  return localStorage.getItem(STORAGE_KEY) === "1";
+}
+
+function getCollapsedServerSnapshot() {
+  return false;
+}
+
+function emitCollapsed() {
+  collapsedListeners.forEach((listener) => listener());
+}
 
 const groups = [
   {
@@ -66,17 +88,15 @@ function isActive(pathname: string, href: string) {
 
 export function Sidebar({ userName, userRole }: { userName?: string | null; userRole?: string | null }) {
   const pathname = usePathname();
-  const [collapsed, setCollapsed] = useState(() => {
-    if (typeof window === "undefined") return false;
-    return localStorage.getItem(STORAGE_KEY) === "1";
-  });
+  const collapsed = useSyncExternalStore(
+    subscribeCollapsed,
+    getCollapsedSnapshot,
+    getCollapsedServerSnapshot,
+  );
 
   function toggle() {
-    setCollapsed((current) => {
-      const next = !current;
-      localStorage.setItem(STORAGE_KEY, next ? "1" : "0");
-      return next;
-    });
+    localStorage.setItem(STORAGE_KEY, collapsed ? "0" : "1");
+    emitCollapsed();
   }
 
   const initial = (userName ?? "U").trim().charAt(0).toUpperCase() || "U";

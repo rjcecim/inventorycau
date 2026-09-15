@@ -5,7 +5,7 @@ Alterações pequenas, correções e ajustes mantêm a mesma versão e increment
 `X.Y.Z` muda somente quando houver mudança funcional relevante ou significativa.
 O número do Build é sequencial e não reinicia quando `X.Y.Z` avança.
 
-## 1.3.0 (Build 7)
+## 1.3.0 (Build 8)
 
 Controle de aquisição, garantia e modernização de computadores e monitores, com indicadores no dashboard e relatórios próprios.
 
@@ -23,11 +23,14 @@ Controle de aquisição, garantia e modernização de computadores e monitores, 
 - Formulários, actions e detalhes passam a gravar e exibir dados de aquisição sem herança monitor ← computador
 - Página de relatórios ganha atalhos para Garantias e Modernização
 - README passa a descrever o CAU Ativos e o fluxo Docker, no lugar do texto padrão do create-next-app
+- `next start` passa a escutar em `0.0.0.0:3000`, alinhado ao `dev` para acesso pela rede
+- `.env.example` documenta `AUTH_SECRET`, `AUTH_TRUST_HOST` e `DATABASE_URL`
 
 ### Corrigido
 
 - Ajustes de lint em filtros de tabela, busca global, menu lateral e SearchSelect (incluindo `aria-controls` no combobox)
 - Remoção dos ícones SVG padrão do Next.js em `public/` que não eram usados pelo app
+- Hidratação do menu lateral: a preferência recolhida no `localStorage` só é aplicada depois do HTML do servidor, evitando mismatch no React
 
 ## 1.2.0 (Build 5)
 
