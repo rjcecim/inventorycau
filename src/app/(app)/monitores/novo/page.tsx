@@ -21,7 +21,7 @@ export default async function NovoMonitorPage() {
       </p>
       <PageHeader
         title="Novo monitor"
-        description="Preencha os dados do monitor. Depois de salvar, você volta para a ficha."
+        description="Cadastre um monitor ou um lote pela faixa de patrimônios. Depois de salvar um, você vai para a ficha; o lote volta para a lista."
       />
       <MonitorEditor
         departments={departments}

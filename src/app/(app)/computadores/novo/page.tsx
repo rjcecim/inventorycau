@@ -21,7 +21,7 @@ export default async function NovoComputadorPage() {
       </p>
       <PageHeader
         title="Novo computador"
-        description="Preencha os dados do equipamento. Depois de salvar, você volta para a ficha do computador."
+        description="Cadastre um equipamento ou um lote pela faixa de patrimônios. Depois de salvar um, você vai para a ficha; o lote volta para a lista."
       />
       <ComputerEditor
         departments={departments}

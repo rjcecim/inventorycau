@@ -46,7 +46,7 @@ type Col =
 const COLUMNS: Array<[Col, string, "left" | "right"]> = [
   ["tombo", "Patrimônio", "left"],
   ["tipo", "Tipo", "left"],
-  ["modelo", "Fabricante / modelo", "left"],
+  ["modelo", "Modelo", "left"],
   ["setor", "Setor", "left"],
   ["notaFiscal", "Nota fiscal", "left"],
   ["recebimento", "Recebimento", "left"],
@@ -59,9 +59,7 @@ const COLUMNS: Array<[Col, string, "left" | "right"]> = [
 function cell(row: Enriched, col: Col) {
   if (col === "tombo") return row.tombo || EMPTY_FILTER;
   if (col === "tipo") return row.kind === "COMPUTER" ? "Computador" : "Monitor";
-  if (col === "modelo") {
-    return [row.fabricante, row.modelo].filter(Boolean).join(" / ") || EMPTY_FILTER;
-  }
+  if (col === "modelo") return row.modelo || EMPTY_FILTER;
   if (col === "setor") return row.setorLabel || EMPTY_FILTER;
   if (col === "notaFiscal") return formatCalendarDate(parseIsoDate(row.dataNotaFiscal ?? ""));
   if (col === "recebimento") return formatCalendarDate(row.warranty.receivedAt);
@@ -176,11 +174,11 @@ export function GarantiasReport({
             onClick={() =>
               downloadCsv(
                 `garantias-${refDate}.csv`,
-                ["Patrimônio", "Tipo", "Fabricante/Modelo", "Setor", "Nota fiscal", "Recebimento", "Prazo", "Vencimento", "Situação", "Dias"],
+                ["Patrimônio", "Tipo", "Modelo", "Setor", "Nota fiscal", "Recebimento", "Prazo", "Vencimento", "Situação", "Dias"],
                 filtered.map((row) => [
                   row.tombo,
                   row.kind === "COMPUTER" ? "Computador" : "Monitor",
-                  [row.fabricante, row.modelo].filter(Boolean).join(" / "),
+                  row.modelo ?? "",
                   row.setorLabel,
                   formatCalendarDate(parseIsoDate(row.dataNotaFiscal ?? "")),
                   formatCalendarDate(row.warranty.receivedAt),
@@ -244,7 +242,7 @@ export function GarantiasReport({
                   </Link>
                 </td>
                 <td className="px-4 py-3 text-slate-600">{row.kind === "COMPUTER" ? "Computador" : "Monitor"}</td>
-                <td className="px-4 py-3 text-slate-600">{[row.fabricante, row.modelo].filter(Boolean).join(" / ") || "—"}</td>
+                <td className="px-4 py-3 text-slate-600">{row.modelo || "—"}</td>
                 <td className="px-4 py-3 text-slate-600">{row.setorLabel || "—"}</td>
                 <td className="px-4 py-3 text-slate-600">{formatCalendarDate(parseIsoDate(row.dataNotaFiscal ?? ""))}</td>
                 <td className="px-4 py-3 text-slate-600">{formatCalendarDate(row.warranty.receivedAt)}</td>

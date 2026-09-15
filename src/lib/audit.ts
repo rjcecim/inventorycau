@@ -38,5 +38,6 @@ export const FIELD_LABELS: Record<string, string> = {
   computador: "Computador associado",
   tombo: "Patrimônio",
   created: "Cadastro",
+  lote: "Cadastro em lote",
   deleted: "Exclusão",
 };

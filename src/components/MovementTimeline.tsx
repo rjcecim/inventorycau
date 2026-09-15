@@ -65,7 +65,15 @@ function groupMovements(items: Movement[]): ChangeGroup[] {
     groups.set(key, {
       key,
       kind: item.kind,
-      assetLabel: item.kind === "COMPUTER" ? `PC ${tombo ?? ""}` : `Monitor ${tombo ?? ""}`,
+      assetLabel: tombo
+        ? item.kind === "COMPUTER"
+          ? `PC ${tombo}`
+          : `Monitor ${tombo}`
+        : item.campo === "lote"
+          ? item.valorNovo ?? "Cadastro em lote"
+          : item.kind === "COMPUTER"
+            ? "Computadores"
+            : "Monitores",
       assetHref: assetId
         ? item.kind === "COMPUTER"
           ? `/computadores/${assetId}`

@@ -9,6 +9,7 @@ import { prisma } from "@/lib/prisma";
 import { emptyToNull } from "@/lib/utils";
 import { formatPredio } from "@/lib/predios";
 import { parseAcquisitionFromForm } from "@/lib/acquisition-form";
+import { formatTomboRangeLabel, parseTomboRange } from "@/lib/tombo-range";
 
 const statusEnum = z.enum([
   "IN_USE",
@@ -178,6 +179,88 @@ export async function saveComputador(_: unknown, formData: FormData) {
     return { success: true, id: savedId };
   } catch {
     return { error: "Não foi possível salvar. Verifique patrimônio e serial duplicados." };
+  }
+}
+
+export async function createComputadoresLote(_: unknown, formData: FormData) {
+  const session = await requireAdmin();
+  if (formData.get("loteConfirmado") !== "1") {
+    return { error: "Confirme o cadastro em lote." };
+  }
+  const range = parseTomboRange(String(formData.get("tomboInicio") ?? ""), String(formData.get("tomboFim") ?? ""));
+  if ("error" in range) return { error: range.error };
+
+  const parsed = schema.omit({ id: true, tombo: true, serialNumber: true }).safeParse({
+    fabricante: emptyToNull(formData.get("fabricante")),
+    modelo: emptyToNull(formData.get("modelo")),
+    status: formData.get("status") || "AVAILABLE",
+    processador: emptyToNull(formData.get("processador")),
+    memoriaRam: emptyToNull(formData.get("memoriaRam")),
+    armazenamento: emptyToNull(formData.get("armazenamento")),
+    observacoes: emptyToNull(formData.get("observacoes")),
+    servidorId: emptyToNull(formData.get("servidorId")),
+    departamentoId: emptyToNull(formData.get("departamentoId")),
+    localizacaoId: emptyToNull(formData.get("localizacaoId")),
+  });
+  if (!parsed.success) return { error: parsed.error.issues[0].message };
+
+  const acquisition = parseAcquisitionFromForm(formData);
+  if (acquisition.error || !acquisition.data) {
+    return { error: acquisition.error ?? "Dados de aquisição inválidos." };
+  }
+
+  const data = parsed.data;
+  const acq = acquisition.data;
+  const { tombos, start, end, count } = range.ok;
+
+  try {
+    const [servidor, existing] = await Promise.all([
+      data.servidorId ? prisma.servidor.findUnique({ where: { id: data.servidorId } }) : null,
+      prisma.computador.findMany({
+        where: { tombo: { in: tombos } },
+        select: { tombo: true },
+        orderBy: { tombo: "asc" },
+      }),
+    ]);
+    if (existing.length) {
+      const sample = existing.slice(0, 8).map((item) => item.tombo).join(", ");
+      const extra = existing.length > 8 ? ` e mais ${existing.length - 8}` : "";
+      return { error: `Já existem ${existing.length} patrimônios nessa faixa: ${sample}${extra}.` };
+    }
+
+    const usuario = servidor?.nome ?? null;
+    await prisma.$transaction(async (tx) => {
+      await tx.computador.createMany({
+        data: tombos.map((tombo) => ({
+          tombo,
+          serialNumber: null,
+          fabricante: data.fabricante,
+          modelo: data.modelo,
+          status: data.status,
+          processador: data.processador,
+          memoriaRam: data.memoriaRam,
+          armazenamento: data.armazenamento,
+          observacoes: data.observacoes,
+          usuario,
+          servidorId: data.servidorId,
+          departamentoId: data.departamentoId,
+          localizacaoId: data.localizacaoId,
+          dataNotaFiscal: acq.dataNotaFiscal,
+          dataRecebimento: acq.dataRecebimento,
+          prazoGarantiaAnos: acq.prazoGarantiaAnos,
+        })),
+      });
+      await logChanges({
+        tx,
+        kind: AssetKind.COMPUTER,
+        actorId: session.user.id,
+        changes: [{ campo: "lote", novo: formatTomboRangeLabel({ start, end, count }) }],
+      });
+    });
+    refresh();
+    return { success: true, count };
+  } catch {
+    return { error: "Não foi possível criar o lote. Verifique patrimônios duplicados." };
   }
 }
 

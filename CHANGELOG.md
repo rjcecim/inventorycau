@@ -5,6 +5,22 @@ Alterações pequenas, correções e ajustes mantêm a mesma versão e increment
 `X.Y.Z` muda somente quando houver mudança funcional relevante ou significativa.
 O número do Build é sequencial e não reinicia quando `X.Y.Z` avança.
 
+## 1.4.0 (Build 9)
+
+Cadastro em lote de computadores e monitores pela faixa de patrimônios, no mesmo formulário de novo equipamento.
+
+### Adicionado
+
+- Modo Lote nas telas de novo computador e novo monitor (Um equipamento / Lote), restrito a administradores
+- Faixa de patrimônios inicial–final, com prévia da quantidade (até 500) e confirmação antes de gravar
+- Criação atômica do lote, sem número de série e sem vínculo monitor–computador; o cadastro falha se algum patrimônio já existir
+- Registro único de movimentação “Cadastro em lote” na linha do tempo
+
+### Alterado
+
+- Relatório de Garantias passa a exibir só a coluna Modelo, sem fabricante
+- Placeholders de patrimônio alinhados ao padrão numérico (`000001`); exemplos de hardware baseados no OptiPlex 7010 e no HP P24a G4
+
 ## 1.3.0 (Build 8)
 
 Controle de aquisição, garantia e modernização de computadores e monitores, com indicadores no dashboard e relatórios próprios.
