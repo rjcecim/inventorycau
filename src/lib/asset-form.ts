@@ -109,7 +109,7 @@ export async function loadMonitorFormOptions() {
     prisma.computador.findMany({
       where: { deletedAt: null },
       orderBy: { tombo: "asc" },
-      include: { departamento: true },
+      include: { departamento: true, localizacao: true },
     }),
   ]);
   return {
@@ -121,6 +121,9 @@ export async function loadMonitorFormOptions() {
       status: item.status,
       departamento: item.departamento
         ? { codigo: item.departamento.codigo, nome: item.departamento.nome }
+        : null,
+      localizacao: item.localizacao
+        ? { nome: item.localizacao.nome, cidade: item.localizacao.cidade, uf: item.localizacao.uf }
         : null,
     })),
   };

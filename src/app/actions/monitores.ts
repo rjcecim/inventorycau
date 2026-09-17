@@ -10,6 +10,7 @@ import { emptyToNull } from "@/lib/utils";
 import { formatPredio } from "@/lib/predios";
 import { parseAcquisitionFromForm } from "@/lib/acquisition-form";
 import { formatTomboRangeLabel, parseTomboRange } from "@/lib/tombo-range";
+import { releaseDeletedTombos, retireAssetKeys } from "@/lib/tombo-reuse";
 
 const schema = z.object({
   id: z.string().optional(),
@@ -146,32 +147,38 @@ export async function saveMonitor(_: unknown, formData: FormData) {
         });
       });
     } else {
-      const created = await prisma.monitor.create({
-        data: {
-          tombo: data.tombo,
-          serialNumber: data.serialNumber,
-          fabricante: data.fabricante,
-          modelo: data.modelo,
-          tamanho: data.tamanho,
-          resolucao: data.resolucao,
-          conexoes: data.conexoes,
-          status,
-          observacoes: data.observacoes,
-          usuario,
-          servidorId,
-          departamentoId,
-          localizacaoId,
-          computadorId: data.computadorId,
-          dataNotaFiscal: acq.dataNotaFiscal,
-          dataRecebimento: acq.dataRecebimento,
-          prazoGarantiaAnos: acq.prazoGarantiaAnos,
-        },
-      });
-      await logChanges({
-        kind: AssetKind.MONITOR,
-        monitorId: created.id,
-        actorId: session.user.id,
-        changes: [{ campo: "created", novo: created.tombo }],
+      const created = await prisma.$transaction(async (tx) => {
+        const released = await releaseDeletedTombos(tx, AssetKind.MONITOR, [data.tombo]);
+        if ("error" in released) throw new Error(released.error);
+        const row = await tx.monitor.create({
+          data: {
+            tombo: data.tombo,
+            serialNumber: data.serialNumber,
+            fabricante: data.fabricante,
+            modelo: data.modelo,
+            tamanho: data.tamanho,
+            resolucao: data.resolucao,
+            conexoes: data.conexoes,
+            status,
+            observacoes: data.observacoes,
+            usuario,
+            servidorId,
+            departamentoId,
+            localizacaoId,
+            computadorId: data.computadorId,
+            dataNotaFiscal: acq.dataNotaFiscal,
+            dataRecebimento: acq.dataRecebimento,
+            prazoGarantiaAnos: acq.prazoGarantiaAnos,
+          },
+        });
+        await logChanges({
+          tx,
+          kind: AssetKind.MONITOR,
+          monitorId: row.id,
+          actorId: session.user.id,
+          changes: [{ campo: "created", novo: row.tombo }],
+        });
+        return row;
       });
       savedId = created.id;
     }
@@ -214,22 +221,19 @@ export async function createMonitoresLote(_: unknown, formData: FormData) {
   const { tombos, start, end, count } = range.ok;
 
   try {
-    const [servidor, existing] = await Promise.all([
+    const [servidor, departamento, localizacao] = await Promise.all([
       data.servidorId ? prisma.servidor.findUnique({ where: { id: data.servidorId } }) : null,
-      prisma.monitor.findMany({
-        where: { tombo: { in: tombos } },
-        select: { tombo: true },
-        orderBy: { tombo: "asc" },
-      }),
+      data.departamentoId ? prisma.departamento.findUnique({ where: { id: data.departamentoId } }) : null,
+      data.localizacaoId ? prisma.localizacao.findUnique({ where: { id: data.localizacaoId } }) : null,
     ]);
-    if (existing.length) {
-      const sample = existing.slice(0, 8).map((item) => item.tombo).join(", ");
-      const extra = existing.length > 8 ? ` e mais ${existing.length - 8}` : "";
-      return { error: `Já existem ${existing.length} patrimônios nessa faixa: ${sample}${extra}.` };
-    }
+    if (data.servidorId && !servidor) return { error: "Usuário não encontrado." };
+    if (data.departamentoId && !departamento) return { error: "Setor não encontrado." };
+    if (data.localizacaoId && !localizacao) return { error: "Prédio não encontrado." };
 
     const usuario = servidor?.nome ?? null;
-    await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx) => {
+      const released = await releaseDeletedTombos(tx, AssetKind.MONITOR, tombos);
+      if ("error" in released) return released;
       await tx.monitor.createMany({
         data: tombos.map((tombo) => ({
           tombo,
@@ -257,7 +261,9 @@ export async function createMonitoresLote(_: unknown, formData: FormData) {
         actorId: session.user.id,
         changes: [{ campo: "lote", novo: formatTomboRangeLabel({ start, end, count }) }],
       });
+      return { ok: true as const };
     });
+    if ("error" in result) return result;
     refresh();
     return { success: true, count };
   } catch {
@@ -363,7 +369,10 @@ export async function deleteMonitor(id: string) {
   const session = await requireAdmin();
   const current = await prisma.monitor.findUnique({ where: { id } });
   if (!current) return { error: "Monitor não encontrado." };
-  await prisma.monitor.update({ where: { id }, data: { deletedAt: new Date(), status: "INACTIVE", computadorId: null } });
+  await prisma.monitor.update({
+    where: { id },
+    data: { deletedAt: new Date(), status: "INACTIVE", computadorId: null, ...retireAssetKeys(id, current.tombo, current.serialNumber) },
+  });
   await logChanges({
     kind: AssetKind.MONITOR,
     monitorId: id,

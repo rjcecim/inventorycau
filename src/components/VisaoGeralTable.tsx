@@ -90,7 +90,7 @@ function visibleMonitors(row: Row, filters: Partial<Record<Col, string[]>>) {
 
 function PatrimonioLink({ href, label, modelo }: { href: string; label: string; modelo: string }) {
   return (
-    <Link className="text-brand hover:underline" href={href} title={modelo || "Modelo não informado"}>
+    <Link className="font-medium text-brand hover:underline" href={href} title={modelo || "Modelo não informado"}>
       {label}
     </Link>
   );
@@ -187,7 +187,7 @@ export function VisaoGeralTable({ rows }: { rows: Row[] }) {
                     )}
                   </td>
                   <td className="px-4 py-3 text-slate-600">{row.modeloComputador || "—"}</td>
-                  <td className="px-4 py-3 text-slate-600">
+                  <td className="px-4 py-3 font-medium">
                     {shown.length ? (
                       <span className="flex flex-wrap gap-x-2">
                         {shown.map((monitor, index) => (
@@ -198,7 +198,7 @@ export function VisaoGeralTable({ rows }: { rows: Row[] }) {
                         ))}
                       </span>
                     ) : (
-                      "—"
+                      <span className="font-normal text-slate-600">—</span>
                     )}
                   </td>
                   <td className="px-4 py-3 text-slate-600">{modelos.join(", ") || "—"}</td>

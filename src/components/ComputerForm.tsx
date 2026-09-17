@@ -70,8 +70,8 @@ export function ComputerForm({
   } = useLoteCadastro(isCreate);
 
   const [state, action, pending] = useActionState(async (prev: unknown, fd: FormData) => {
-    const res = fd.get("cadastroModo") === "lote" ? await createComputadoresLote(prev, fd) : await saveComputador(prev, fd);
-    if (res.success) onSuccess?.("id" in res ? res.id : undefined);
+    const res = lote || fd.get("cadastroModo") === "lote" ? await createComputadoresLote(prev, fd) : await saveComputador(prev, fd);
+    if ("success" in res && res.success) onSuccess?.("id" in res ? res.id : undefined);
     return res;
   }, null);
 

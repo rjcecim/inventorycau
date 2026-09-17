@@ -5,7 +5,7 @@ Alterações pequenas, correções e ajustes mantêm a mesma versão e increment
 `X.Y.Z` muda somente quando houver mudança funcional relevante ou significativa.
 O número do Build é sequencial e não reinicia quando `X.Y.Z` avança.
 
-## 1.4.0 (Build 9)
+## 1.4.0 (Build 10)
 
 Cadastro em lote de computadores e monitores pela faixa de patrimônios, no mesmo formulário de novo equipamento.
 
@@ -18,8 +18,16 @@ Cadastro em lote de computadores e monitores pela faixa de patrimônios, no mesm
 
 ### Alterado
 
-- Relatório de Garantias passa a exibir só a coluna Modelo, sem fabricante
+- Relatórios de Garantias e Modernização passam a exibir só a coluna Modelo, sem fabricante
 - Placeholders de patrimônio alinhados ao padrão numérico (`000001`); exemplos de hardware baseados no OptiPlex 7010 e no HP P24a G4
+- Texto de associação do monitor deixa claro que ele copia usuário, setor, prédio e status do computador
+- Visão Geral: tombo do monitor com o mesmo peso visual do tombo do PC
+
+### Corrigido
+
+- Cadastro em lote grava usuário, setor e prédio (SearchSelect confirma o valor digitado; o diálogo de confirmação não descarta o formulário)
+- Patrimônios inativos voltam a ficar livres para cadastro individual e em lote
+- Movimentação do PC replica no histórico dos monitores vinculados (usuário, setor, prédio e status)
 
 ## 1.3.0 (Build 8)
 

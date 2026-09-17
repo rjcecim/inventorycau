@@ -62,7 +62,7 @@ type Col =
 const COLUMNS: Array<[Col, string, "left" | "right"]> = [
   ["tombo", "Patrimônio", "left"],
   ["tipo", "Tipo", "left"],
-  ["modelo", "Fabricante / modelo", "left"],
+  ["modelo", "Modelo", "left"],
   ["setor", "Setor", "left"],
   ["recebimento", "Recebimento", "left"],
   ["prazo", "Prazo", "left"],
@@ -79,9 +79,7 @@ function matchesSituation(situation: ModernizationSituation, filter: string) {
 function cell(row: Enriched, col: Col) {
   if (col === "tombo") return row.tombo || EMPTY_FILTER;
   if (col === "tipo") return row.kind === "COMPUTER" ? "Computador" : "Monitor";
-  if (col === "modelo") {
-    return [row.fabricante, row.modelo].filter(Boolean).join(" / ") || EMPTY_FILTER;
-  }
+  if (col === "modelo") return row.modelo || EMPTY_FILTER;
   if (col === "setor") return row.setorLabel || EMPTY_FILTER;
   if (col === "recebimento") return formatCalendarDate(row.mod.receivedAt);
   if (col === "prazo") return `${row.mod.years} anos`;
@@ -215,7 +213,7 @@ export function ModernizacaoReport({
                 [
                   "Patrimônio",
                   "Tipo",
-                  "Fabricante/Modelo",
+                  "Modelo",
                   "Setor",
                   "Recebimento",
                   "Prazo aplicável",
@@ -226,7 +224,7 @@ export function ModernizacaoReport({
                 filtered.map((row) => [
                   row.tombo,
                   row.kind === "COMPUTER" ? "Computador" : "Monitor",
-                  [row.fabricante, row.modelo].filter(Boolean).join(" / "),
+                  row.modelo || "",
                   row.setorLabel,
                   formatCalendarDate(row.mod.receivedAt),
                   `${row.mod.years} anos`,
@@ -307,7 +305,7 @@ export function ModernizacaoReport({
                 </td>
                 <td className="px-4 py-3 text-slate-600">{row.kind === "COMPUTER" ? "Computador" : "Monitor"}</td>
                 <td className="px-4 py-3 text-slate-600">
-                  {[row.fabricante, row.modelo].filter(Boolean).join(" / ") || "—"}
+                  {row.modelo || "—"}
                 </td>
                 <td className="px-4 py-3 text-slate-600">{row.setorLabel || "—"}</td>
                 <td className="px-4 py-3 text-slate-600">{formatCalendarDate(row.mod.receivedAt)}</td>

@@ -30,17 +30,29 @@ export function useLoteCadastro(enabled: boolean) {
     setConfirmOpen(true);
   }
 
+  function submitForm() {
+    formRef.current?.requestSubmit();
+  }
+
   function onSubmit(event: FormEvent<HTMLFormElement>) {
-    if (!lote || confirmToken) return;
+    if (!lote || confirmToken) {
+      if (confirmToken) queueMicrotask(() => setConfirmToken(false));
+      return;
+    }
     event.preventDefault();
     requestConfirm();
   }
 
   function confirm() {
-    setConfirmOpen(false);
     flushSync(() => setConfirmToken(true));
-    formRef.current?.requestSubmit();
-    setConfirmToken(false);
+    const dialog = document.querySelector("dialog[open]");
+    flushSync(() => setConfirmOpen(false));
+    if (dialog instanceof HTMLDialogElement && dialog.open) {
+      dialog.addEventListener("close", submitForm, { once: true });
+      dialog.close();
+      return;
+    }
+    requestAnimationFrame(submitForm);
   }
 
   return {

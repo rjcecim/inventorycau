@@ -23,6 +23,7 @@ type ComputerOption = {
   usuario: string | null;
   status: AssetStatus;
   departamento: { codigo: string; nome: string } | null;
+  localizacao?: { nome: string; cidade?: string | null; uf?: string | null } | null;
 };
 
 export function MonitorForm({
@@ -83,8 +84,8 @@ export function MonitorForm({
   const linkedComputer = lote ? null : computers.find((item) => item.id === computadorId) ?? null;
 
   const [state, action, pending] = useActionState(async (prev: unknown, fd: FormData) => {
-    const res = fd.get("cadastroModo") === "lote" ? await createMonitoresLote(prev, fd) : await saveMonitor(prev, fd);
-    if (res.success) onSuccess?.("id" in res ? res.id : undefined);
+    const res = lote || fd.get("cadastroModo") === "lote" ? await createMonitoresLote(prev, fd) : await saveMonitor(prev, fd);
+    if ("success" in res && res.success) onSuccess?.("id" in res ? res.id : undefined);
     return res;
   }, null);
 
@@ -192,7 +193,7 @@ export function MonitorForm({
         ) : (
           <>
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Mover para</p>
-            <Field label="Computador" hint="herda usuário, setor e status do PC">
+            <Field label="Computador" hint="ao associar, o monitor copia usuário, setor, prédio e status">
               <SearchSelect
                 name="computadorId"
                 value={computadorId}
@@ -210,8 +211,10 @@ export function MonitorForm({
                 Este monitor ficará com o usuário <span className="font-medium text-slate-900">{linkedComputer.usuario || "não informado"}</span>
                 {", o setor "}
                 <span className="font-medium text-slate-900">{setorLabel(linkedComputer.departamento) || "não informado"}</span>
+                {", o prédio "}
+                <span className="font-medium text-slate-900">{formatPredio(linkedComputer.localizacao) || "não informado"}</span>
                 {" e o status "}
-                <span className="font-medium text-slate-900">{statusLabel(linkedComputer.status)}</span> do computador.
+                <span className="font-medium text-slate-900">{statusLabel(linkedComputer.status)}</span> deste computador.
               </p>
             ) : (
               <div className="grid gap-4 sm:grid-cols-2">

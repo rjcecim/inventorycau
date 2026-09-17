@@ -19,6 +19,7 @@ type ComputerOption = {
   usuario: string | null;
   status: AssetStatus;
   departamento: { codigo: string; nome: string } | null;
+  localizacao?: { nome: string; cidade?: string | null; uf?: string | null } | null;
 };
 
 export function MonitorMoveForm({
@@ -63,7 +64,7 @@ export function MonitorMoveForm({
         Associe a um computador ou aloque a setor, usuário e prédio.
       </p>
 
-      <Field label="Computador" hint="herda usuário, setor, prédio e status do PC">
+      <Field label="Computador" hint="ao associar, o monitor copia usuário, setor, prédio e status">
         <SearchSelect
           name="computadorId"
           value={computadorId}
@@ -85,8 +86,10 @@ export function MonitorMoveForm({
             <span className="font-medium text-slate-900">{linkedComputer.usuario || "não informado"}</span>
             {", o setor "}
             <span className="font-medium text-slate-900">{setorLabel(linkedComputer.departamento) || "não informado"}</span>
+            {", o prédio "}
+            <span className="font-medium text-slate-900">{formatPredio(linkedComputer.localizacao) || "não informado"}</span>
             {" e o status "}
-            <span className="font-medium text-slate-900">{statusLabel(linkedComputer.status)}</span> do computador.
+            <span className="font-medium text-slate-900">{statusLabel(linkedComputer.status)}</span> deste computador.
           </p>
         </>
       ) : (

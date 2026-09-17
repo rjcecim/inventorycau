@@ -67,27 +67,6 @@ export function SearchSelect({
   }, [query, rows, selectedLabel]);
 
   useEffect(() => {
-    if (open) return;
-    startTransition(() => setQuery(selectedLabel));
-  }, [open, selectedLabel]);
-
-  useEffect(() => {
-    function onPointerDown(event: PointerEvent) {
-      if (!rootRef.current?.contains(event.target as Node)) {
-        setOpen(false);
-        if (allowEmpty && !query.trim()) {
-          setValue("");
-          setQuery(emptyLabel);
-        } else {
-          setQuery(selectedLabel);
-        }
-      }
-    }
-    document.addEventListener("pointerdown", onPointerDown);
-    return () => document.removeEventListener("pointerdown", onPointerDown);
-  });
-
-  useEffect(() => {
     startTransition(() => setActive(0));
   }, [query, open]);
 
@@ -96,6 +75,34 @@ export function SearchSelect({
     setQuery(option.label);
     setOpen(false);
   }
+
+  function commitTypedValue(rawQuery: string, currentLabel: string) {
+    const term = fold(rawQuery.trim());
+    if (!term || rawQuery === currentLabel) return;
+    const exact = rows.find((item) => fold(item.label) === term);
+    const partial = rows.filter((item) => item.id && fold(item.label).includes(term));
+    const match = exact ?? (partial.length === 1 ? partial[0] : undefined);
+    if (match) choose(match);
+  }
+
+  useEffect(() => {
+    if (open) return;
+    startTransition(() => setQuery(selectedLabel));
+  }, [open, selectedLabel]);
+
+  useEffect(() => {
+    function onPointerDown(event: PointerEvent) {
+      if (rootRef.current?.contains(event.target as Node)) return;
+      commitTypedValue(query, selectedLabel);
+      setOpen(false);
+      if (allowEmpty && !query.trim()) {
+        setValue("");
+        setQuery(emptyLabel);
+      }
+    }
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => document.removeEventListener("pointerdown", onPointerDown);
+  });
 
   return (
     <div className={cn("relative", className)} ref={rootRef}>
@@ -119,6 +126,7 @@ export function SearchSelect({
             setOpen(true);
             event.target.select();
           }}
+          onBlur={() => commitTypedValue(query, selectedLabel)}
           onKeyDown={(event) => {
             if (event.key === "ArrowDown") {
               event.preventDefault();

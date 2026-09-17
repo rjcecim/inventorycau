@@ -4,12 +4,13 @@ import { AssetKind } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireAdmin, requireSession } from "@/lib/authz";
-import { logChanges } from "@/lib/audit";
+import { logChanges, logLinkedMonitorChanges } from "@/lib/audit";
 import { prisma } from "@/lib/prisma";
 import { emptyToNull } from "@/lib/utils";
 import { formatPredio } from "@/lib/predios";
 import { parseAcquisitionFromForm } from "@/lib/acquisition-form";
 import { formatTomboRangeLabel, parseTomboRange } from "@/lib/tombo-range";
+import { releaseDeletedTombos, retireAssetKeys } from "@/lib/tombo-reuse";
 
 const statusEnum = z.enum([
   "IN_USE",
@@ -100,7 +101,7 @@ export async function saveComputador(_: unknown, formData: FormData) {
         ? await prisma.localizacao.findUnique({ where: { id: data.localizacaoId } })
         : null;
 
-      await prisma.$transaction(async (tx) => {
+      const linkedMonitorIds = await prisma.$transaction(async (tx) => {
         await tx.computador.update({
           where: { id: data.id },
           data: {
@@ -132,46 +133,64 @@ export async function saveComputador(_: unknown, formData: FormData) {
             status: data.status,
           },
         });
+        const allocationChanges = [
+          { campo: "status", anterior: current.status, novo: data.status },
+          { campo: "departamento", anterior: current.departamento?.nome, novo: nextDept?.nome },
+          { campo: "localizacao", anterior: formatPredio(current.localizacao), novo: formatPredio(nextLoc) },
+          { campo: "usuario", anterior: current.usuario, novo: usuario },
+        ];
         await logChanges({
           tx,
           kind: AssetKind.COMPUTER,
           computadorId: data.id,
           actorId: session.user.id,
           changes: [
-            { campo: "status", anterior: current.status, novo: data.status },
-            { campo: "departamento", anterior: current.departamento?.nome, novo: nextDept?.nome },
-            { campo: "localizacao", anterior: formatPredio(current.localizacao), novo: formatPredio(nextLoc) },
-            { campo: "usuario", anterior: current.usuario, novo: usuario },
+            ...allocationChanges,
             { campo: "tombo", anterior: current.tombo, novo: data.tombo },
           ],
         });
+        return logLinkedMonitorChanges({
+          tx,
+          computadorId: current.id,
+          actorId: session.user.id,
+          changes: allocationChanges,
+        });
       });
+      for (const monitorId of linkedMonitorIds) {
+        revalidatePath(`/monitores/${monitorId}`);
+      }
     } else {
-      const created = await prisma.computador.create({
-        data: {
-          tombo: data.tombo,
-          serialNumber: data.serialNumber,
-          fabricante: data.fabricante,
-          modelo: data.modelo,
-          status: data.status,
-          processador: data.processador,
-          memoriaRam: data.memoriaRam,
-          armazenamento: data.armazenamento,
-          observacoes: data.observacoes,
-          usuario,
-          servidorId: data.servidorId,
-          departamentoId,
-          localizacaoId: data.localizacaoId,
-          dataNotaFiscal: acq.dataNotaFiscal,
-          dataRecebimento: acq.dataRecebimento,
-          prazoGarantiaAnos: acq.prazoGarantiaAnos,
-        },
-      });
-      await logChanges({
-        kind: AssetKind.COMPUTER,
-        computadorId: created.id,
-        actorId: session.user.id,
-        changes: [{ campo: "created", novo: created.tombo }],
+      const created = await prisma.$transaction(async (tx) => {
+        const released = await releaseDeletedTombos(tx, AssetKind.COMPUTER, [data.tombo]);
+        if ("error" in released) throw new Error(released.error);
+        const row = await tx.computador.create({
+          data: {
+            tombo: data.tombo,
+            serialNumber: data.serialNumber,
+            fabricante: data.fabricante,
+            modelo: data.modelo,
+            status: data.status,
+            processador: data.processador,
+            memoriaRam: data.memoriaRam,
+            armazenamento: data.armazenamento,
+            observacoes: data.observacoes,
+            usuario,
+            servidorId: data.servidorId,
+            departamentoId,
+            localizacaoId: data.localizacaoId,
+            dataNotaFiscal: acq.dataNotaFiscal,
+            dataRecebimento: acq.dataRecebimento,
+            prazoGarantiaAnos: acq.prazoGarantiaAnos,
+          },
+        });
+        await logChanges({
+          tx,
+          kind: AssetKind.COMPUTER,
+          computadorId: row.id,
+          actorId: session.user.id,
+          changes: [{ campo: "created", novo: row.tombo }],
+        });
+        return row;
       });
       savedId = created.id;
     }
@@ -214,22 +233,19 @@ export async function createComputadoresLote(_: unknown, formData: FormData) {
   const { tombos, start, end, count } = range.ok;
 
   try {
-    const [servidor, existing] = await Promise.all([
+    const [servidor, departamento, localizacao] = await Promise.all([
       data.servidorId ? prisma.servidor.findUnique({ where: { id: data.servidorId } }) : null,
-      prisma.computador.findMany({
-        where: { tombo: { in: tombos } },
-        select: { tombo: true },
-        orderBy: { tombo: "asc" },
-      }),
+      data.departamentoId ? prisma.departamento.findUnique({ where: { id: data.departamentoId } }) : null,
+      data.localizacaoId ? prisma.localizacao.findUnique({ where: { id: data.localizacaoId } }) : null,
     ]);
-    if (existing.length) {
-      const sample = existing.slice(0, 8).map((item) => item.tombo).join(", ");
-      const extra = existing.length > 8 ? ` e mais ${existing.length - 8}` : "";
-      return { error: `Já existem ${existing.length} patrimônios nessa faixa: ${sample}${extra}.` };
-    }
+    if (data.servidorId && !servidor) return { error: "Usuário não encontrado." };
+    if (data.departamentoId && !departamento) return { error: "Setor não encontrado." };
+    if (data.localizacaoId && !localizacao) return { error: "Prédio não encontrado." };
 
     const usuario = servidor?.nome ?? null;
-    await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx) => {
+      const released = await releaseDeletedTombos(tx, AssetKind.COMPUTER, tombos);
+      if ("error" in released) return released;
       await tx.computador.createMany({
         data: tombos.map((tombo) => ({
           tombo,
@@ -256,7 +272,9 @@ export async function createComputadoresLote(_: unknown, formData: FormData) {
         actorId: session.user.id,
         changes: [{ campo: "lote", novo: formatTomboRangeLabel({ start, end, count }) }],
       });
+      return { ok: true as const };
     });
+    if ("error" in result) return result;
     refresh();
     return { success: true, count };
   } catch {
@@ -302,7 +320,14 @@ export async function updateAlocacaoComputador(_: unknown, formData: FormData) {
       ? await prisma.localizacao.findUnique({ where: { id: data.localizacaoId } })
       : null;
 
-    await prisma.$transaction(async (tx) => {
+    const allocationChanges = [
+      { campo: "status", anterior: current.status, novo: data.status },
+      { campo: "departamento", anterior: current.departamento?.nome, novo: nextDept?.nome },
+      { campo: "localizacao", anterior: formatPredio(current.localizacao), novo: formatPredio(nextLoc) },
+      { campo: "usuario", anterior: current.usuario, novo: usuario },
+    ];
+
+    const linkedMonitorIds = await prisma.$transaction(async (tx) => {
       await tx.computador.update({
         where: { id: data.id },
         data: {
@@ -328,17 +353,21 @@ export async function updateAlocacaoComputador(_: unknown, formData: FormData) {
         kind: AssetKind.COMPUTER,
         computadorId: data.id,
         actorId: session.user.id,
-        changes: [
-          { campo: "status", anterior: current.status, novo: data.status },
-          { campo: "departamento", anterior: current.departamento?.nome, novo: nextDept?.nome },
-          { campo: "localizacao", anterior: formatPredio(current.localizacao), novo: formatPredio(nextLoc) },
-          { campo: "usuario", anterior: current.usuario, novo: usuario },
-        ],
+        changes: allocationChanges,
+      });
+      return logLinkedMonitorChanges({
+        tx,
+        computadorId: data.id,
+        actorId: session.user.id,
+        changes: allocationChanges,
       });
     });
 
     refresh();
     revalidatePath(`/computadores/${data.id}`);
+    for (const monitorId of linkedMonitorIds) {
+      revalidatePath(`/monitores/${monitorId}`);
+    }
     return { success: true, id: data.id };
   } catch {
     return { error: "Não foi possível atualizar a alocação." };
@@ -354,7 +383,10 @@ export async function deleteComputador(id: string) {
   }
   await prisma.$transaction([
     prisma.monitor.updateMany({ where: { computadorId: id }, data: { computadorId: null } }),
-    prisma.computador.update({ where: { id }, data: { deletedAt: new Date(), status: "INACTIVE" } }),
+    prisma.computador.update({
+      where: { id },
+      data: { deletedAt: new Date(), status: "INACTIVE", ...retireAssetKeys(id, current.tombo, current.serialNumber) },
+    }),
   ]);
   await logChanges({
     kind: AssetKind.COMPUTER,
