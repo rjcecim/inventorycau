@@ -6,8 +6,10 @@ import { isAdminRole } from "@/lib/authz";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { MovementTimeline } from "@/components/MovementTimeline";
 import { MonitorDetailActions } from "@/components/MonitorDetailActions";
+import { GrupoEquipamentos } from "@/components/GrupoEquipamentos";
 import { formatPredio } from "@/lib/predios";
-import { monitorAlocacao, setorLabel } from "@/lib/alocacao";
+import { setorLabel } from "@/lib/alocacao";
+import { listAgrupamentoCandidates, listGroupMembers, toClientGroupMember } from "@/lib/equipamento-grupo";
 import { computeWarranty } from "@/lib/garantia";
 import { computeModernization } from "@/lib/modernizacao";
 import { formatCalendarDate, formatDbDate } from "@/lib/dates";
@@ -26,15 +28,18 @@ function Item({ label, value }: { label: string; value?: string | null }) {
 export default async function MonitorDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const session = await auth();
-  const monitor = await prisma.monitor.findFirst({
-    where: { id, deletedAt: null },
-    include: {
-      departamento: true,
-      localizacao: true,
-      computador: { include: { departamento: true, localizacao: true } },
-      movimentacoes: { orderBy: { createdDate: "desc" }, take: 30, include: { actor: true, computador: true, monitor: true } },
-    },
-  });
+  const [monitor, members, candidates] = await Promise.all([
+    prisma.monitor.findFirst({
+      where: { id, deletedAt: null },
+      include: {
+        departamento: true,
+        localizacao: true,
+        movimentacoes: { orderBy: { createdDate: "desc" }, include: { actor: true, computador: true, monitor: true } },
+      },
+    }),
+    listGroupMembers("MONITOR", id),
+    listAgrupamentoCandidates(),
+  ]);
   if (!monitor) notFound();
   const warranty = computeWarranty({
     dataRecebimento: monitor.dataRecebimento,
@@ -54,7 +59,7 @@ export default async function MonitorDetailPage({ params }: { params: Promise<{ 
           </p>
           <h1 className="mt-1 text-2xl font-semibold tracking-tight">{monitor.tombo}</h1>
           <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-slate-600">
-            <StatusBadge status={monitorAlocacao(monitor).status} />
+            <StatusBadge status={monitor.status} />
             <span>{monitor.modelo || "Modelo não informado"}</span>
           </div>
         </div>
@@ -93,21 +98,17 @@ export default async function MonitorDetailPage({ params }: { params: Promise<{ 
       <section className="surface p-5">
         <h2 className="mb-4 text-sm font-semibold">Alocação</h2>
         <dl className="grid gap-4 sm:grid-cols-3">
-          <Item label="Usuário" value={monitorAlocacao(monitor).usuario} />
-          <Item label="Setor" value={setorLabel(monitorAlocacao(monitor).departamento) || null} />
-          <Item label="Prédio" value={formatPredio(monitor.computador?.localizacao ?? monitor.localizacao) || null} />
-          <div>
-            <dt className="text-xs font-medium text-slate-500">Computador associado</dt>
-            <dd className="mt-1 text-sm">
-              {monitor.computador ? (
-                <Link className="font-medium text-brand hover:underline" href={`/computadores/${monitor.computador.id}`}>
-                  {monitor.computador.tombo}
-                </Link>
-              ) : "—"}
-            </dd>
-          </div>
+          <Item label="Usuário" value={monitor.usuario} />
+          <Item label="Setor" value={setorLabel(monitor.departamento) || null} />
+          <Item label="Prédio" value={formatPredio(monitor.localizacao) || null} />
         </dl>
       </section>
+
+      <GrupoEquipamentos
+        current={{ kind: "MONITOR", id: monitor.id, tombo: monitor.tombo }}
+        members={members.map(toClientGroupMember)}
+        candidates={candidates}
+      />
 
       <section className="surface p-5">
         <h2 className="mb-4 text-sm font-semibold">Histórico</h2>

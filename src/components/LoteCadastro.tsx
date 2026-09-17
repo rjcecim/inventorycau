@@ -91,8 +91,7 @@ export function LoteConfirmDialog({
     <Dialog title="Confirmar cadastro em lote" open={open} onClose={onClose}>
       <div className="space-y-4">
         <p className="text-sm text-slate-600">
-          Vai cadastrar {rangeLabel ?? `os ${noun}`} com os mesmos dados, sem número de série.
-          {noun === "monitores" ? " Nenhum monitor será vinculado a um computador." : ""} Confirma?
+          Vai cadastrar {rangeLabel ?? `os ${noun}`} com os mesmos dados, sem número de série. Confirma?
         </p>
         <div className="flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={onClose}>

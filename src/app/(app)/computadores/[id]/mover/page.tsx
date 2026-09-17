@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { loadComputerFormOptions } from "@/lib/asset-form";
 import { PageHeader } from "@/components/PageHeader";
 import { ComputerMover } from "@/components/ComputerMover";
+import { listGroupMembers } from "@/lib/equipamento-grupo";
 
 export const dynamic = "force-dynamic";
 
@@ -12,9 +13,10 @@ export default async function MoverComputadorPage({ params }: { params: Promise<
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
   const { id } = await params;
-  const [computer, options] = await Promise.all([
+  const [computer, options, members] = await Promise.all([
     prisma.computador.findFirst({ where: { id, deletedAt: null } }),
     loadComputerFormOptions(),
+    listGroupMembers("COMPUTER", id),
   ]);
   if (!computer) notFound();
 
@@ -42,6 +44,7 @@ export default async function MoverComputadorPage({ params }: { params: Promise<
         departments={options.departments}
         locations={options.locations}
         people={options.people}
+        grouped={members.length >= 2}
         cancelHref={`/computadores/${computer.id}`}
       />
     </>

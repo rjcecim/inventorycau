@@ -7,7 +7,6 @@ export const dynamic = "force-dynamic";
 export default async function MovimentacoesPage() {
   const items = await prisma.movimentacao.findMany({
     orderBy: { createdDate: "desc" },
-    take: 100,
     include: { actor: true, computador: true, monitor: true },
   });
 

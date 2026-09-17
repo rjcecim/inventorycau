@@ -19,14 +19,27 @@ export default async function ComputadoresPage({
   const computers = await prisma.computador.findMany({
     where: { deletedAt: null, ...(status ? { status } : {}) },
     orderBy: { tombo: "asc" },
-    include: { departamento: true, localizacao: true, _count: { select: { monitores: true } } },
+    include: { departamento: true, localizacao: true },
   });
+  const groupIds = [...new Set(computers.map((item) => item.groupId).filter((id): id is string => Boolean(id)))];
+  const [pcGroups, monitorGroups] = groupIds.length
+    ? await Promise.all([
+        prisma.computador.groupBy({ by: ["groupId"], where: { deletedAt: null, groupId: { in: groupIds } }, _count: { _all: true } }),
+        prisma.monitor.groupBy({ by: ["groupId"], where: { deletedAt: null, groupId: { in: groupIds } }, _count: { _all: true } }),
+      ])
+    : [[], []];
+  const pcCount = new Map(pcGroups.map((item) => [item.groupId, item._count._all]));
+  const monCount = new Map(monitorGroups.map((item) => [item.groupId, item._count._all]));
+  const rows = computers.map((item) => ({
+    ...item,
+    agrupados: item.groupId ? (pcCount.get(item.groupId) ?? 0) + (monCount.get(item.groupId) ?? 0) - 1 : 0,
+  }));
 
   return (
     <>
-      <PageHeader title="Computadores" description="Inventário de estações. Use o filtro no cabeçalho de cada coluna, como no Excel." />
+      <PageHeader title="Computadores" description="Inventário de computadores. Use o filtro no cabeçalho de cada coluna, como no Excel." />
       <ComputerTable
-        computers={computers}
+        computers={rows}
         isAdmin={isAdminRole(session?.user?.role)}
       />
     </>

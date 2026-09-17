@@ -18,6 +18,7 @@ export function ComputerMoveForm({
   departments,
   locations,
   people = [],
+  grouped,
   cancelHref,
   onSuccess,
 }: {
@@ -32,6 +33,7 @@ export function ComputerMoveForm({
   departments: Option[];
   locations: Option[];
   people?: PersonOption[];
+  grouped?: boolean;
   cancelHref: string;
   onSuccess?: (id?: string) => void;
 }) {
@@ -47,6 +49,7 @@ export function ComputerMoveForm({
       <p className="text-sm text-slate-600">
         Movimentação do patrimônio <span className="font-semibold text-slate-900">{computer.tombo}</span>.
         Altere usuário, setor, prédio ou status.
+        {grouped ? " Alterações de alocação serão sincronizadas com os equipamentos agrupados." : ""}
       </p>
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Usuário" hint="opcional">

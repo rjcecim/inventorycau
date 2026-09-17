@@ -22,15 +22,30 @@ export default async function MonitoresPage({
     include: {
       departamento: true,
       localizacao: true,
-      computador: { include: { departamento: true, localizacao: true } },
     },
   });
+  const groupIds = [...new Set(monitors.map((item) => item.groupId).filter((id): id is string => Boolean(id)))];
+  const groupedPcs = groupIds.length
+    ? await prisma.computador.findMany({
+        where: { deletedAt: null, groupId: { in: groupIds } },
+        include: { departamento: true, localizacao: true },
+        orderBy: { tombo: "asc" },
+      })
+    : [];
+  const pcByGroup = new Map<string, (typeof groupedPcs)[number]>();
+  for (const pc of groupedPcs) {
+    if (pc.groupId && !pcByGroup.has(pc.groupId)) pcByGroup.set(pc.groupId, pc);
+  }
+  const rows = monitors.map((item) => ({
+    ...item,
+    computador: item.groupId ? pcByGroup.get(item.groupId) ?? null : null,
+  }));
 
   return (
     <>
       <PageHeader title="Monitores" description="Inventário de monitores. Use o filtro no cabeçalho de cada coluna, como no Excel." />
       <MonitorTable
-        monitors={monitors}
+        monitors={rows}
         isAdmin={isAdminRole(session?.user?.role)}
       />
     </>

@@ -56,7 +56,6 @@ export function toMonitorFormValues(monitor: {
   servidorId: string | null;
   departamentoId: string | null;
   localizacaoId: string | null;
-  computadorId: string | null;
   dataNotaFiscal?: Date | string | null;
   dataRecebimento?: Date | string | null;
   prazoGarantiaAnos?: number | null;
@@ -76,7 +75,6 @@ export function toMonitorFormValues(monitor: {
     servidorId: monitor.servidorId,
     departamentoId: monitor.departamentoId,
     localizacaoId: monitor.localizacaoId,
-    computadorId: monitor.computadorId,
     dataNotaFiscal: monitor.dataNotaFiscal ?? null,
     dataRecebimento: monitor.dataRecebimento ?? null,
     prazoGarantiaAnos: monitor.prazoGarantiaAnos ?? null,
@@ -104,27 +102,5 @@ export async function loadComputerFormOptions() {
 }
 
 export async function loadMonitorFormOptions() {
-  const [options, computers] = await Promise.all([
-    loadComputerFormOptions(),
-    prisma.computador.findMany({
-      where: { deletedAt: null },
-      orderBy: { tombo: "asc" },
-      include: { departamento: true, localizacao: true },
-    }),
-  ]);
-  return {
-    ...options,
-    computers: computers.map((item) => ({
-      id: item.id,
-      tombo: item.tombo,
-      usuario: item.usuario,
-      status: item.status,
-      departamento: item.departamento
-        ? { codigo: item.departamento.codigo, nome: item.departamento.nome }
-        : null,
-      localizacao: item.localizacao
-        ? { nome: item.localizacao.nome, cidade: item.localizacao.cidade, uf: item.localizacao.uf }
-        : null,
-    })),
-  };
+  return loadComputerFormOptions();
 }

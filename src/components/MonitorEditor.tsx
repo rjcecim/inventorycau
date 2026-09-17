@@ -7,12 +7,11 @@ type Props = {
   monitor?: Parameters<typeof MonitorForm>[0]["monitor"];
   departments: Parameters<typeof MonitorForm>[0]["departments"];
   locations: Parameters<typeof MonitorForm>[0]["locations"];
-  computers: Parameters<typeof MonitorForm>[0]["computers"];
   people: NonNullable<Parameters<typeof MonitorForm>[0]["people"]>;
   cancelHref: string;
 };
 
-export function MonitorEditor({ monitor, departments, locations, computers, people, cancelHref }: Props) {
+export function MonitorEditor({ monitor, departments, locations, people, cancelHref }: Props) {
   const router = useRouter();
   return (
     <div className="surface p-5 sm:p-6">
@@ -20,7 +19,6 @@ export function MonitorEditor({ monitor, departments, locations, computers, peop
         monitor={monitor}
         departments={departments}
         locations={locations}
-        computers={computers}
         people={people}
         cancelHref={cancelHref}
         onSuccess={(id) => router.push(id ? `/monitores/${id}` : "/monitores")}

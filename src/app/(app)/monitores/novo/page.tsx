@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 export default async function NovoMonitorPage() {
   const session = await auth();
   if (!isAdminRole(session?.user?.role)) redirect("/monitores");
-  const { departments, locations, people, computers } = await loadMonitorFormOptions();
+  const { departments, locations, people } = await loadMonitorFormOptions();
 
   return (
     <>
@@ -26,7 +26,6 @@ export default async function NovoMonitorPage() {
       <MonitorEditor
         departments={departments}
         locations={locations}
-        computers={computers}
         people={people}
         cancelHref="/monitores"
       />

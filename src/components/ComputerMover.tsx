@@ -8,10 +8,11 @@ type Props = {
   departments: Parameters<typeof ComputerMoveForm>[0]["departments"];
   locations: Parameters<typeof ComputerMoveForm>[0]["locations"];
   people: NonNullable<Parameters<typeof ComputerMoveForm>[0]["people"]>;
+  grouped?: boolean;
   cancelHref: string;
 };
 
-export function ComputerMover({ computer, departments, locations, people, cancelHref }: Props) {
+export function ComputerMover({ computer, departments, locations, people, grouped, cancelHref }: Props) {
   const router = useRouter();
   return (
     <div className="surface p-5 sm:p-6">
@@ -20,6 +21,7 @@ export function ComputerMover({ computer, departments, locations, people, cancel
         departments={departments}
         locations={locations}
         people={people}
+        grouped={grouped}
         cancelHref={cancelHref}
         onSuccess={(id) => router.push(id ? `/computadores/${id}` : "/computadores")}
       />

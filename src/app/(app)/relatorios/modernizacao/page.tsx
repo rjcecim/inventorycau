@@ -26,7 +26,6 @@ export default async function RelatorioModernizacaoPage({
       where: { deletedAt: null },
       include: {
         departamento: true,
-        computador: { include: { departamento: true } },
       },
       orderBy: { tombo: "asc" },
     }),
@@ -56,7 +55,7 @@ export default async function RelatorioModernizacaoPage({
         tombo: item.tombo,
         fabricante: item.fabricante,
         modelo: item.modelo,
-        setorId: item.computador?.departamentoId ?? item.departamentoId,
+        setorId: item.departamentoId,
         setorLabel: setorLabel(aloc.departamento),
         dataRecebimento: toInputDate(item.dataRecebimento) || null,
       };

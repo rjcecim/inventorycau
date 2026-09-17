@@ -21,6 +21,7 @@ type Row = {
   modeloComputador: string;
   status: AssetStatus;
   usuario: string;
+  computadores?: AssetRef[];
   monitores: AssetRef[];
 };
 
@@ -180,10 +181,19 @@ export function VisaoGeralTable({ rows }: { rows: Row[] }) {
                   <td className="px-4 py-3 text-slate-600">{row.setor || "—"}</td>
                   <td className="px-4 py-3 text-slate-600">{row.predio || "—"}</td>
                   <td className="px-4 py-3 font-medium">
-                    {row.kind === "computer" ? (
+                    {(row.computadores ?? []).length ? (
+                      <span className="flex flex-wrap gap-x-2">
+                        {(row.computadores ?? []).map((item, index) => (
+                          <span key={item.id}>
+                            <PatrimonioLink href={`/computadores/${item.id}`} label={item.tombo} modelo={item.modelo} />
+                            {index < (row.computadores?.length ?? 0) - 1 ? "," : ""}
+                          </span>
+                        ))}
+                      </span>
+                    ) : row.kind === "computer" ? (
                       <PatrimonioLink href={row.href} label={row.computadorTombo} modelo={row.modeloComputador} />
                     ) : (
-                      "—"
+                      <span className="font-normal text-slate-600">—</span>
                     )}
                   </td>
                   <td className="px-4 py-3 text-slate-600">{row.modeloComputador || "—"}</td>

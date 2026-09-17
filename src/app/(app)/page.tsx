@@ -40,8 +40,7 @@ export default async function DashboardPage() {
     pcsSemSetor,
     pcsSemPredio,
     pcsSemUsuario,
-    pcsSemMonitor,
-    monitoresSemAlocacao,
+    computersForGroups,
     monitorsForDist,
     computersLifecycle,
     monitorsLifecycle,
@@ -51,7 +50,6 @@ export default async function DashboardPage() {
     prisma.computador.groupBy({ by: ["departamentoId"], where, _count: { _all: true } }),
     prisma.computador.groupBy({ by: ["localizacaoId"], where, _count: { _all: true } }),
     prisma.movimentacao.findMany({
-      take: 8,
       orderBy: { createdDate: "desc" },
       include: { actor: true, computador: true, monitor: true },
     }),
@@ -66,21 +64,10 @@ export default async function DashboardPage() {
         OR: [{ usuario: null }, { usuario: "" }],
       },
     }),
-    prisma.computador.count({
-      where: { ...where, monitores: { none: { deletedAt: null } } },
-    }),
-    prisma.monitor.count({
-      where: { ...where, computadorId: null, departamentoId: null },
-    }),
+    prisma.computador.findMany({ where, select: { groupId: true } }),
     prisma.monitor.findMany({
       where,
-      select: {
-        departamentoId: true,
-        localizacaoId: true,
-        computador: {
-          select: { departamentoId: true, localizacaoId: true },
-        },
-      },
+      select: { groupId: true, departamentoId: true, localizacaoId: true },
     }),
     prisma.computador.findMany({
       where,
@@ -120,6 +107,13 @@ export default async function DashboardPage() {
     ...monitorsLifecycle.map((item) => ({ kind: "MONITOR" as const, dataRecebimento: item.dataRecebimento })),
   ]);
 
+  const pcGroupIds = new Set(computersForGroups.map((item) => item.groupId).filter((id): id is string => Boolean(id)));
+  const monGroupIds = new Set(monitorsForDist.map((item) => item.groupId).filter((id): id is string => Boolean(id)));
+  const pcsSemMonitor = computersForGroups.filter((item) => !item.groupId || !monGroupIds.has(item.groupId)).length;
+  const monitoresSemAlocacao = monitorsForDist.filter(
+    (item) => (!item.groupId || !pcGroupIds.has(item.groupId)) && !item.departamentoId,
+  ).length;
+
   const computerTotal = computerStatus.reduce((sum, row) => sum + row._count._all, 0);
   const monitorTotal = monitorStatus.reduce((sum, row) => sum + row._count._all, 0);
   const pcInUse = countStatus(computerStatus, "IN_USE");
@@ -136,8 +130,8 @@ export default async function DashboardPage() {
   const monitorByDept = new Map<string, number>();
   const monitorByLoc = new Map<string, number>();
   for (const monitor of monitorsForDist) {
-    const deptId = monitor.computador?.departamentoId ?? monitor.departamentoId;
-    const locId = monitor.computador?.localizacaoId ?? monitor.localizacaoId;
+    const deptId = monitor.departamentoId;
+    const locId = monitor.localizacaoId;
     bump(monitorByDept, deptId ?? "");
     bump(monitorByLoc, locId ?? "");
   }

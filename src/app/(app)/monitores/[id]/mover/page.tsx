@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { loadMonitorFormOptions } from "@/lib/asset-form";
 import { PageHeader } from "@/components/PageHeader";
 import { MonitorMover } from "@/components/MonitorMover";
+import { listGroupMembers } from "@/lib/equipamento-grupo";
 
 export const dynamic = "force-dynamic";
 
@@ -12,9 +13,10 @@ export default async function MoverMonitorPage({ params }: { params: Promise<{ i
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
   const { id } = await params;
-  const [monitor, options] = await Promise.all([
+  const [monitor, options, members] = await Promise.all([
     prisma.monitor.findFirst({ where: { id, deletedAt: null } }),
     loadMonitorFormOptions(),
+    listGroupMembers("MONITOR", id),
   ]);
   if (!monitor) notFound();
 
@@ -28,7 +30,7 @@ export default async function MoverMonitorPage({ params }: { params: Promise<{ i
       </p>
       <PageHeader
         title={`Mover ${monitor.tombo}`}
-        description="Associe a um computador ou aloque a setor, usuário e prédio. Dados técnicos não são alterados aqui."
+        description="Altere usuário, setor, prédio ou status. Dados técnicos não são alterados aqui."
       />
       <MonitorMover
         monitor={{
@@ -38,12 +40,11 @@ export default async function MoverMonitorPage({ params }: { params: Promise<{ i
           servidorId: monitor.servidorId,
           departamentoId: monitor.departamentoId,
           localizacaoId: monitor.localizacaoId,
-          computadorId: monitor.computadorId,
         }}
         departments={options.departments}
         locations={options.locations}
-        computers={options.computers}
         people={options.people}
+        grouped={members.length >= 2}
         cancelHref={`/monitores/${monitor.id}`}
       />
     </>

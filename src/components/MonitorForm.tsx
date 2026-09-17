@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState } from "react";
 import Link from "next/link";
 import type { AssetStatus } from "@prisma/client";
 import { createMonitoresLote, saveMonitor } from "@/app/actions/monitores";
@@ -11,26 +11,16 @@ import { Button } from "@/components/ui/Button";
 import { Field, TextArea, TextInput } from "@/components/ui/Field";
 import { SearchSelect } from "@/components/ui/SearchSelect";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
-import { STATUS_OPTIONS, statusLabel } from "@/lib/status";
+import { STATUS_OPTIONS } from "@/lib/status";
 import { formatPredio } from "@/lib/predios";
-import { setorLabel } from "@/lib/alocacao";
 
 type Option = { id: string; nome?: string; codigo?: string; tombo?: string; cidade?: string | null; uf?: string | null };
 type PersonOption = { id: string; nome: string; matricula?: string | null };
-type ComputerOption = {
-  id: string;
-  tombo: string;
-  usuario: string | null;
-  status: AssetStatus;
-  departamento: { codigo: string; nome: string } | null;
-  localizacao?: { nome: string; cidade?: string | null; uf?: string | null } | null;
-};
 
 export function MonitorForm({
   monitor,
   departments,
   locations,
-  computers,
   people = [],
   cancelHref,
   onSuccess,
@@ -50,14 +40,12 @@ export function MonitorForm({
     servidorId: string | null;
     departamentoId: string | null;
     localizacaoId: string | null;
-    computadorId: string | null;
     dataNotaFiscal?: string | Date | null;
     dataRecebimento?: string | Date | null;
     prazoGarantiaAnos?: number | null;
   };
   departments: Option[];
   locations: Option[];
-  computers: ComputerOption[];
   people?: PersonOption[];
   cancelHref?: string;
   onSuccess?: (id?: string) => void;
@@ -80,8 +68,6 @@ export function MonitorForm({
     confirm,
     requestConfirm,
   } = useLoteCadastro(isCreate);
-  const [computadorId, setComputadorId] = useState(monitor?.computadorId ?? "");
-  const linkedComputer = lote ? null : computers.find((item) => item.id === computadorId) ?? null;
 
   const [state, action, pending] = useActionState(async (prev: unknown, fd: FormData) => {
     const res = lote || fd.get("cadastroModo") === "lote" ? await createMonitoresLote(prev, fd) : await saveMonitor(prev, fd);
@@ -135,127 +121,54 @@ export function MonitorForm({
           <Field label="Conexões">
             <TextInput name="conexoes" defaultValue={monitor?.conexoes ?? ""} placeholder="HDMI, DP" />
           </Field>
-          {linkedComputer ? (
-            <input type="hidden" name="status" value={linkedComputer.status} />
-          ) : (
-            <Field label="Status">
-              <SearchSelect
-                name="status"
-                allowEmpty={false}
-                placeholder="Pesquisar status…"
-                defaultValue={monitor?.status ?? "AVAILABLE"}
-                options={STATUS_OPTIONS}
-              />
-            </Field>
-          )}
+          <Field label="Status">
+            <SearchSelect
+              name="status"
+              allowEmpty={false}
+              placeholder="Pesquisar status…"
+              defaultValue={monitor?.status ?? "AVAILABLE"}
+              options={STATUS_OPTIONS}
+            />
+          </Field>
         </div>
 
-        {lote ? (
-          <>
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Alocação</p>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Setor">
-                <SearchSelect
-                  name="departamentoId"
-                  defaultValue={monitor?.departamentoId ?? ""}
-                  placeholder="Pesquisar setor…"
-                  options={departments.map((item) => ({
-                    id: item.id,
-                    label: item.codigo ? `${item.codigo}. ${item.nome}` : item.nome ?? "",
-                  }))}
-                />
-              </Field>
-              <Field label="Prédio">
-                <SearchSelect
-                  name="localizacaoId"
-                  defaultValue={monitor?.localizacaoId ?? ""}
-                  placeholder="Pesquisar prédio…"
-                  options={locations.map((item) => ({
-                    id: item.id,
-                    label: formatPredio({ nome: item.nome ?? "", cidade: item.cidade, uf: item.uf }),
-                  }))}
-                />
-              </Field>
-              <Field label="Usuário" hint="opcional">
-                <SearchSelect
-                  name="servidorId"
-                  defaultValue={monitor?.servidorId ?? ""}
-                  emptyLabel="Nenhum"
-                  placeholder="Pesquisar usuário…"
-                  options={people.map((person) => ({
-                    id: person.id,
-                    label: person.matricula ? `${person.nome} — ${person.matricula}` : person.nome,
-                  }))}
-                />
-              </Field>
-            </div>
-          </>
-        ) : (
-          <>
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Mover para</p>
-            <Field label="Computador" hint="ao associar, o monitor copia usuário, setor, prédio e status">
-              <SearchSelect
-                name="computadorId"
-                value={computadorId}
-                onChange={setComputadorId}
-                emptyLabel="Nenhum — alocar só a um setor"
-                placeholder="Pesquisar computador…"
-                options={computers.map((item) => ({
-                  id: item.id,
-                  label: item.usuario ? `${item.tombo} — ${item.usuario}` : item.tombo,
-                }))}
-              />
-            </Field>
-            {linkedComputer ? (
-              <p className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
-                Este monitor ficará com o usuário <span className="font-medium text-slate-900">{linkedComputer.usuario || "não informado"}</span>
-                {", o setor "}
-                <span className="font-medium text-slate-900">{setorLabel(linkedComputer.departamento) || "não informado"}</span>
-                {", o prédio "}
-                <span className="font-medium text-slate-900">{formatPredio(linkedComputer.localizacao) || "não informado"}</span>
-                {" e o status "}
-                <span className="font-medium text-slate-900">{statusLabel(linkedComputer.status)}</span> deste computador.
-              </p>
-            ) : (
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Field label="Setor" hint="quando não estiver em um computador">
-                  <SearchSelect
-                    name="departamentoId"
-                    defaultValue={monitor?.departamentoId ?? ""}
-                    placeholder="Pesquisar setor…"
-                    options={departments.map((item) => ({
-                      id: item.id,
-                      label: item.codigo ? `${item.codigo}. ${item.nome}` : item.nome ?? "",
-                    }))}
-                  />
-                </Field>
-                <Field label="Prédio">
-                  <SearchSelect
-                    name="localizacaoId"
-                    defaultValue={monitor?.localizacaoId ?? ""}
-                    placeholder="Pesquisar prédio…"
-                    options={locations.map((item) => ({
-                      id: item.id,
-                      label: formatPredio({ nome: item.nome ?? "", cidade: item.cidade, uf: item.uf }),
-                    }))}
-                  />
-                </Field>
-                <Field label="Usuário" hint="opcional">
-                  <SearchSelect
-                    name="servidorId"
-                    defaultValue={monitor?.servidorId ?? ""}
-                    emptyLabel="Nenhum"
-                    placeholder="Pesquisar usuário…"
-                    options={people.map((person) => ({
-                      id: person.id,
-                      label: person.matricula ? `${person.nome} — ${person.matricula}` : person.nome,
-                    }))}
-                  />
-                </Field>
-              </div>
-            )}
-          </>
-        )}
+        <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Alocação</p>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Setor">
+            <SearchSelect
+              name="departamentoId"
+              defaultValue={monitor?.departamentoId ?? ""}
+              placeholder="Pesquisar setor…"
+              options={departments.map((item) => ({
+                id: item.id,
+                label: item.codigo ? `${item.codigo}. ${item.nome}` : item.nome ?? "",
+              }))}
+            />
+          </Field>
+          <Field label="Prédio">
+            <SearchSelect
+              name="localizacaoId"
+              defaultValue={monitor?.localizacaoId ?? ""}
+              placeholder="Pesquisar prédio…"
+              options={locations.map((item) => ({
+                id: item.id,
+                label: formatPredio({ nome: item.nome ?? "", cidade: item.cidade, uf: item.uf }),
+              }))}
+            />
+          </Field>
+          <Field label="Usuário" hint="opcional">
+            <SearchSelect
+              name="servidorId"
+              defaultValue={monitor?.servidorId ?? ""}
+              emptyLabel="Nenhum"
+              placeholder="Pesquisar usuário…"
+              options={people.map((person) => ({
+                id: person.id,
+                label: person.matricula ? `${person.nome} — ${person.matricula}` : person.nome,
+              }))}
+            />
+          </Field>
+        </div>
 
         <AcquisitionFields
           kind="MONITOR"

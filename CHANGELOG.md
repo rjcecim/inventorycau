@@ -5,6 +5,30 @@ Alterações pequenas, correções e ajustes mantêm a mesma versão e increment
 `X.Y.Z` muda somente quando houver mudança funcional relevante ou significativa.
 O número do Build é sequencial e não reinicia quando `X.Y.Z` avança.
 
+## 1.5.0 (Build 11)
+
+Agrupamento horizontal de computadores e monitores por identificador compartilhado, sem cadastro de estação e sem o computador como pai estrutural.
+
+### Adicionado
+
+- `groupId` compartilhado em computador e monitor, com migração dos vínculos antigos `computadorId`
+- Ações para agrupar, adicionar a um grupo existente, desagrupar um equipamento, desagrupar tudo e transferir entre grupos
+- Sincronização transacional de usuário, setor, prédio e status entre os integrantes do agrupamento
+- Seção Equipamentos agrupados nas fichas, com confirmação quando a alocação for substituída
+- Visão Geral passa a listar grupos com PC, só monitores ou equipamento avulso
+- Paginação de 10 em 10 no histórico das fichas, em Movimentações e na Atividade recente
+- Testes automatizados dos cenários de agrupamento (Vitest)
+
+### Alterado
+
+- Monitor deixa de herdar alocação pelo vínculo `Monitor → Computador`
+- Relatórios, dashboard e listagens passam a usar o agrupamento compartilhado
+- Data/hora do histórico formatada em UTC−3 (Belém), igual no servidor e no navegador
+
+### Corrigido
+
+- Hidratação do histórico: o Docker em UTC e o navegador em horário local deixavam de coincidir
+
 ## 1.4.0 (Build 10)
 
 Cadastro em lote de computadores e monitores pela faixa de patrimônios, no mesmo formulário de novo equipamento.

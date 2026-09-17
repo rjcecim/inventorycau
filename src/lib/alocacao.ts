@@ -10,21 +10,7 @@ export function monitorAlocacao(monitor: {
   status: AssetStatus;
   departamento: { codigo?: string; nome: string } | null;
   localizacao?: { nome: string; cidade?: string | null; uf?: string | null } | null;
-  computador: {
-    usuario: string | null;
-    status: AssetStatus;
-    departamento: { codigo?: string; nome: string } | null;
-    localizacao?: { nome: string; cidade?: string | null; uf?: string | null } | null;
-  } | null;
 }) {
-  if (monitor.computador) {
-    return {
-      usuario: monitor.computador.usuario,
-      status: monitor.computador.status,
-      departamento: monitor.computador.departamento,
-      localizacao: monitor.computador.localizacao ?? null,
-    };
-  }
   return {
     usuario: monitor.usuario,
     status: monitor.status,

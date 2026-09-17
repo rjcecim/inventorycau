@@ -4,13 +4,15 @@ import { AssetKind } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireAdmin, requireSession } from "@/lib/authz";
-import { logChanges, logLinkedMonitorChanges } from "@/lib/audit";
+import { logChanges } from "@/lib/audit";
 import { prisma } from "@/lib/prisma";
 import { emptyToNull } from "@/lib/utils";
 import { formatPredio } from "@/lib/predios";
 import { parseAcquisitionFromForm } from "@/lib/acquisition-form";
 import { formatTomboRangeLabel, parseTomboRange } from "@/lib/tombo-range";
 import { releaseDeletedTombos, retireAssetKeys } from "@/lib/tombo-reuse";
+import { detachOnDelete, GROUP_TX, prismaGroupStore, revalidateGroupMembers, syncAllocationFromOriginator } from "@/lib/equipamento-grupo";
+import { statusLabel } from "@/lib/status";
 
 const statusEnum = z.enum([
   "IN_USE",
@@ -101,7 +103,7 @@ export async function saveComputador(_: unknown, formData: FormData) {
         ? await prisma.localizacao.findUnique({ where: { id: data.localizacaoId } })
         : null;
 
-      const linkedMonitorIds = await prisma.$transaction(async (tx) => {
+      const linked = await prisma.$transaction(async (tx) => {
         await tx.computador.update({
           where: { id: data.id },
           data: {
@@ -123,16 +125,6 @@ export async function saveComputador(_: unknown, formData: FormData) {
             prazoGarantiaAnos: acq.prazoGarantiaAnos,
           },
         });
-        await tx.monitor.updateMany({
-          where: { computadorId: data.id, deletedAt: null },
-          data: {
-            usuario,
-            servidorId: data.servidorId,
-            departamentoId,
-            localizacaoId: data.localizacaoId,
-            status: data.status,
-          },
-        });
         const allocationChanges = [
           { campo: "status", anterior: current.status, novo: data.status },
           { campo: "departamento", anterior: current.departamento?.nome, novo: nextDept?.nome },
@@ -142,23 +134,32 @@ export async function saveComputador(_: unknown, formData: FormData) {
         await logChanges({
           tx,
           kind: AssetKind.COMPUTER,
-          computadorId: data.id,
+          computadorId: current.id,
           actorId: session.user.id,
           changes: [
             ...allocationChanges,
             { campo: "tombo", anterior: current.tombo, novo: data.tombo },
           ],
         });
-        return logLinkedMonitorChanges({
-          tx,
-          computadorId: current.id,
+        return syncAllocationFromOriginator(tx, {
+          originator: { kind: "COMPUTER", id: current.id },
+          previous: {
+            usuario: current.usuario,
+            departamento: current.departamento?.nome ?? null,
+            localizacao: formatPredio(current.localizacao),
+            status: statusLabel(current.status),
+          },
+          next: {
+            usuario,
+            servidorId: data.servidorId,
+            departamentoId,
+            localizacaoId: data.localizacaoId,
+            status: data.status,
+          },
           actorId: session.user.id,
-          changes: allocationChanges,
         });
-      });
-      for (const monitorId of linkedMonitorIds) {
-        revalidatePath(`/monitores/${monitorId}`);
-      }
+      }, GROUP_TX);
+      await revalidateGroupMembers(linked);
     } else {
       const created = await prisma.$transaction(async (tx) => {
         const released = await releaseDeletedTombos(tx, AssetKind.COMPUTER, [data.tombo]);
@@ -327,7 +328,7 @@ export async function updateAlocacaoComputador(_: unknown, formData: FormData) {
       { campo: "usuario", anterior: current.usuario, novo: usuario },
     ];
 
-    const linkedMonitorIds = await prisma.$transaction(async (tx) => {
+    const linked = await prisma.$transaction(async (tx) => {
       await tx.computador.update({
         where: { id: data.id },
         data: {
@@ -338,16 +339,6 @@ export async function updateAlocacaoComputador(_: unknown, formData: FormData) {
           localizacaoId: data.localizacaoId,
         },
       });
-      await tx.monitor.updateMany({
-        where: { computadorId: data.id, deletedAt: null },
-        data: {
-          usuario,
-          servidorId: data.servidorId,
-          departamentoId: data.departamentoId,
-          localizacaoId: data.localizacaoId,
-          status: data.status,
-        },
-      });
       await logChanges({
         tx,
         kind: AssetKind.COMPUTER,
@@ -355,19 +346,28 @@ export async function updateAlocacaoComputador(_: unknown, formData: FormData) {
         actorId: session.user.id,
         changes: allocationChanges,
       });
-      return logLinkedMonitorChanges({
-        tx,
-        computadorId: data.id,
+      return syncAllocationFromOriginator(tx, {
+        originator: { kind: "COMPUTER", id: data.id },
+        previous: {
+          usuario: current.usuario,
+          departamento: current.departamento?.nome ?? null,
+          localizacao: formatPredio(current.localizacao),
+          status: statusLabel(current.status),
+        },
+        next: {
+          usuario,
+          servidorId: data.servidorId,
+          departamentoId: data.departamentoId,
+          localizacaoId: data.localizacaoId,
+          status: data.status,
+        },
         actorId: session.user.id,
-        changes: allocationChanges,
       });
-    });
+    }, GROUP_TX);
 
     refresh();
     revalidatePath(`/computadores/${data.id}`);
-    for (const monitorId of linkedMonitorIds) {
-      revalidatePath(`/monitores/${monitorId}`);
-    }
+    await revalidateGroupMembers(linked);
     return { success: true, id: data.id };
   } catch {
     return { error: "Não foi possível atualizar a alocação." };
@@ -381,13 +381,13 @@ export async function deleteComputador(id: string) {
   if (current.status === "IN_USE") {
     return { error: "Desaloque ou altere o status antes de excluir um equipamento em uso." };
   }
-  await prisma.$transaction([
-    prisma.monitor.updateMany({ where: { computadorId: id }, data: { computadorId: null } }),
-    prisma.computador.update({
+  await prisma.$transaction(async (tx) => {
+    await detachOnDelete(prismaGroupStore(tx), { kind: "COMPUTER", id }, session.user.id);
+    await tx.computador.update({
       where: { id },
-      data: { deletedAt: new Date(), status: "INACTIVE", ...retireAssetKeys(id, current.tombo, current.serialNumber) },
-    }),
-  ]);
+      data: { deletedAt: new Date(), status: "INACTIVE", groupId: null, ...retireAssetKeys(id, current.tombo, current.serialNumber) },
+    });
+  }, GROUP_TX);
   await logChanges({
     kind: AssetKind.COMPUTER,
     computadorId: id,

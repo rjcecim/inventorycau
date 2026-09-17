@@ -43,32 +43,32 @@ export default async function RelatoriosPage({
       departamento: true,
       localizacao: true,
       servidor: true,
-      monitores: { where: { deletedAt: null } },
     },
     orderBy: { tombo: "asc" },
   });
   let monitors = await prisma.monitor.findMany({
     where: { deletedAt: null },
     include: {
-      computador: { include: { departamento: true } },
       departamento: true,
       servidor: true,
     },
     orderBy: { tombo: "asc" },
   });
+  const pcGroups = new Set(computers.map((item) => item.groupId).filter((id): id is string => Boolean(id)));
+  const monGroups = new Set(monitors.map((item) => item.groupId).filter((id): id is string => Boolean(id)));
 
   if (tipo === "sem-setor") computers = computers.filter((item) => !item.departamentoId);
   if (tipo === "sem-predio") computers = computers.filter((item) => !item.localizacaoId);
   if (tipo === "sem-usuario") computers = computers.filter((item) => !hasUsuario(item));
-  if (tipo === "sem-monitor") computers = computers.filter((item) => item.monitores.length === 0);
+  if (tipo === "sem-monitor") computers = computers.filter((item) => !item.groupId || !monGroups.has(item.groupId));
   if (tipo === "manutencao") computers = computers.filter((item) => item.status === "MAINTENANCE");
   if (tipo === "baixados") computers = computers.filter((item) => item.status === "DISPOSED");
   if (tipo === "reserva") computers = computers.filter((item) => item.status === "RESERVE");
   if (tipo === "aguardando") computers = computers.filter((item) => item.status === "AWAITING_INSTALL");
 
-  if (tipo === "sem-computador") monitors = monitors.filter((item) => !item.computadorId);
+  if (tipo === "sem-computador") monitors = monitors.filter((item) => !item.groupId || !pcGroups.has(item.groupId));
   if (tipo === "monitor-sem-alocacao") {
-    monitors = monitors.filter((item) => !item.computadorId && !item.departamentoId);
+    monitors = monitors.filter((item) => (!item.groupId || !pcGroups.has(item.groupId)) && !item.departamentoId);
   }
   if (tipo === "manutencao") monitors = monitors.filter((item) => item.status === "MAINTENANCE");
   if (tipo === "baixados") monitors = monitors.filter((item) => item.status === "DISPOSED");
@@ -170,7 +170,7 @@ export default async function RelatoriosPage({
                         </Link>
                       </td>
                       <td className="px-4 py-3 text-slate-600">
-                        {item.computador?.tombo || item.servidor?.nome || item.usuario || "—"}
+                        {item.servidor?.nome || item.usuario || "—"}
                       </td>
                       <td className="px-4 py-3 text-slate-600">
                         {setorLabel(aloc.departamento) || "—"}

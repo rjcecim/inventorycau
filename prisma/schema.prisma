@@ -28,36 +28,36 @@ enum AssetKind {
 }
 
 model User {
-  id                  String          @id @default(cuid())
-  email               String          @unique
-  contactEmail        String?         @unique @map("contact_email")
-  passwordHash        String          @map("password_hash")
-  fullName            String          @map("full_name")
-  role                Role            @default(USER)
-  mustChangePassword  Boolean         @default(false) @map("must_change_password")
-  otpHash             String?         @map("otp_hash")
-  otpExpiresAt        DateTime?       @map("otp_expires_at")
-  createdDate         DateTime        @default(now()) @map("created_date")
-  updatedDate         DateTime        @updatedAt @map("updated_date")
-  movimentacoes       Movimentacao[]
+  id                    String                 @id @default(cuid())
+  email                 String                 @unique
+  contactEmail          String?                @unique @map("contact_email")
+  passwordHash          String                 @map("password_hash")
+  fullName              String                 @map("full_name")
+  role                  Role                   @default(USER)
+  mustChangePassword    Boolean                @default(false) @map("must_change_password")
+  otpHash               String?                @map("otp_hash")
+  otpExpiresAt          DateTime?              @map("otp_expires_at")
+  createdDate           DateTime               @default(now()) @map("created_date")
+  updatedDate           DateTime               @updatedAt @map("updated_date")
+  movimentacoes         Movimentacao[]
   apuracoesModernizacao ApuracaoModernizacao[]
 
   @@map("users")
 }
 
 model Departamento {
-  id            String         @id @default(cuid())
-  codigo        String         @unique
-  nome          String
-  nivel         Int            @default(1)
-  parentId      String?        @map("parent_id")
-  parent        Departamento?  @relation("DepartamentoTree", fields: [parentId], references: [id])
-  children      Departamento[] @relation("DepartamentoTree")
-  sortOrder     Int            @default(0) @map("sort_order")
-  createdDate   DateTime       @default(now()) @map("created_date")
-  updatedDate   DateTime       @updatedAt @map("updated_date")
-  computadores  Computador[]
-  monitores     Monitor[]
+  id           String         @id @default(cuid())
+  codigo       String         @unique
+  nome         String
+  nivel        Int            @default(1)
+  parentId     String?        @map("parent_id")
+  parent       Departamento?  @relation("DepartamentoTree", fields: [parentId], references: [id])
+  children     Departamento[] @relation("DepartamentoTree")
+  sortOrder    Int            @default(0) @map("sort_order")
+  createdDate  DateTime       @default(now()) @map("created_date")
+  updatedDate  DateTime       @updatedAt @map("updated_date")
+  computadores Computador[]
+  monitores    Monitor[]
 
   @@index([parentId])
   @@index([sortOrder])
@@ -94,31 +94,31 @@ model Localizacao {
 }
 
 model Computador {
-  id                  String          @id @default(cuid())
-  tombo               String          @unique
-  serialNumber        String?         @unique @map("serial_number")
-  fabricante          String?
-  modelo              String?
-  status              AssetStatus     @default(AVAILABLE)
-  processador         String?
-  memoriaRam          String?         @map("memoria_ram")
-  armazenamento       String?
-  observacoes         String?
-  usuario             String?
-  servidorId          String?         @map("servidor_id")
-  servidor            Servidor?       @relation(fields: [servidorId], references: [id])
-  departamentoId      String?         @map("departamento_id")
-  departamento        Departamento?   @relation(fields: [departamentoId], references: [id])
-  localizacaoId       String?         @map("localizacao_id")
-  localizacao         Localizacao?    @relation(fields: [localizacaoId], references: [id])
-  dataNotaFiscal      DateTime?       @map("data_nota_fiscal") @db.Date
-  dataRecebimento     DateTime?       @map("data_recebimento") @db.Date
-  prazoGarantiaAnos   Int?            @map("prazo_garantia_anos")
-  createdDate         DateTime        @default(now()) @map("created_date")
-  updatedDate         DateTime        @updatedAt @map("updated_date")
-  deletedAt           DateTime?       @map("deleted_at")
-  monitores           Monitor[]
-  movimentacoes       Movimentacao[]
+  id                String         @id @default(cuid())
+  tombo             String         @unique
+  serialNumber      String?        @unique @map("serial_number")
+  fabricante        String?
+  modelo            String?
+  status            AssetStatus    @default(AVAILABLE)
+  processador       String?
+  memoriaRam        String?        @map("memoria_ram")
+  armazenamento     String?
+  observacoes       String?
+  usuario           String?
+  servidorId        String?        @map("servidor_id")
+  servidor          Servidor?      @relation(fields: [servidorId], references: [id])
+  departamentoId    String?        @map("departamento_id")
+  departamento      Departamento?  @relation(fields: [departamentoId], references: [id])
+  localizacaoId     String?        @map("localizacao_id")
+  localizacao       Localizacao?   @relation(fields: [localizacaoId], references: [id])
+  dataNotaFiscal    DateTime?      @map("data_nota_fiscal") @db.Date
+  dataRecebimento   DateTime?      @map("data_recebimento") @db.Date
+  prazoGarantiaAnos Int?           @map("prazo_garantia_anos")
+  createdDate       DateTime       @default(now()) @map("created_date")
+  updatedDate       DateTime       @updatedAt @map("updated_date")
+  deletedAt         DateTime?      @map("deleted_at")
+  groupId           String?        @map("group_id")
+  movimentacoes     Movimentacao[]
 
   @@index([modelo])
   @@index([status])
@@ -127,41 +127,41 @@ model Computador {
   @@index([servidorId])
   @@index([fabricante])
   @@index([dataRecebimento])
+  @@index([groupId])
   @@map("computadores")
 }
 
 model Monitor {
-  id                String          @id @default(cuid())
-  tombo             String          @unique
-  serialNumber      String?         @unique @map("serial_number")
+  id                String         @id @default(cuid())
+  tombo             String         @unique
+  serialNumber      String?        @unique @map("serial_number")
   fabricante        String?
   modelo            String?
   tamanho           String?
   resolucao         String?
   conexoes          String?
-  status            AssetStatus     @default(AVAILABLE)
+  status            AssetStatus    @default(AVAILABLE)
   observacoes       String?
   usuario           String?
-  servidorId        String?         @map("servidor_id")
-  servidor          Servidor?       @relation(fields: [servidorId], references: [id])
-  departamentoId    String?         @map("departamento_id")
-  departamento      Departamento?   @relation(fields: [departamentoId], references: [id])
-  localizacaoId     String?         @map("localizacao_id")
-  localizacao       Localizacao?    @relation(fields: [localizacaoId], references: [id])
-  computadorId      String?         @map("computador_id")
-  computador        Computador?     @relation(fields: [computadorId], references: [id])
-  dataNotaFiscal    DateTime?       @map("data_nota_fiscal") @db.Date
-  dataRecebimento   DateTime?       @map("data_recebimento") @db.Date
-  prazoGarantiaAnos Int?            @map("prazo_garantia_anos")
-  createdDate       DateTime        @default(now()) @map("created_date")
-  updatedDate       DateTime        @updatedAt @map("updated_date")
-  deletedAt         DateTime?       @map("deleted_at")
+  servidorId        String?        @map("servidor_id")
+  servidor          Servidor?      @relation(fields: [servidorId], references: [id])
+  departamentoId    String?        @map("departamento_id")
+  departamento      Departamento?  @relation(fields: [departamentoId], references: [id])
+  localizacaoId     String?        @map("localizacao_id")
+  localizacao       Localizacao?   @relation(fields: [localizacaoId], references: [id])
+  groupId           String?        @map("group_id")
+  dataNotaFiscal    DateTime?      @map("data_nota_fiscal") @db.Date
+  dataRecebimento   DateTime?      @map("data_recebimento") @db.Date
+  prazoGarantiaAnos Int?           @map("prazo_garantia_anos")
+  createdDate       DateTime       @default(now()) @map("created_date")
+  updatedDate       DateTime       @updatedAt @map("updated_date")
+  deletedAt         DateTime?      @map("deleted_at")
   movimentacoes     Movimentacao[]
 
   @@index([modelo])
   @@index([status])
   @@index([departamentoId])
-  @@index([computadorId])
+  @@index([groupId])
   @@index([servidorId])
   @@index([fabricante])
   @@index([dataRecebimento])

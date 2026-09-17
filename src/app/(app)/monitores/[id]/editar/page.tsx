@@ -35,7 +35,6 @@ export default async function EditarMonitorPage({ params }: { params: Promise<{ 
         monitor={toMonitorFormValues(monitor)}
         departments={options.departments}
         locations={options.locations}
-        computers={options.computers}
         people={options.people}
         cancelHref={`/monitores/${monitor.id}`}
       />

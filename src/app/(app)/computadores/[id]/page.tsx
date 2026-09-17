@@ -5,8 +5,10 @@ import { prisma } from "@/lib/prisma";
 import { isAdminRole } from "@/lib/authz";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { ComputerDetailActions } from "@/components/ComputerDetailActions";
+import { GrupoEquipamentos } from "@/components/GrupoEquipamentos";
 import { MovementTimeline } from "@/components/MovementTimeline";
 import { formatPredio } from "@/lib/predios";
+import { listAgrupamentoCandidates, listGroupMembers, toClientGroupMember } from "@/lib/equipamento-grupo";
 import { computeWarranty } from "@/lib/garantia";
 import { computeModernization } from "@/lib/modernizacao";
 import { formatCalendarDate, formatDbDate } from "@/lib/dates";
@@ -25,15 +27,18 @@ function Item({ label, value }: { label: string; value?: string | null }) {
 export default async function ComputerDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const session = await auth();
-  const computer = await prisma.computador.findFirst({
-    where: { id, deletedAt: null },
-    include: {
-      departamento: true,
-      localizacao: true,
-      monitores: { where: { deletedAt: null }, orderBy: { tombo: "asc" } },
-      movimentacoes: { orderBy: { createdDate: "desc" }, take: 30, include: { actor: true, computador: true, monitor: true } },
-    },
-  });
+  const [computer, members, candidates] = await Promise.all([
+    prisma.computador.findFirst({
+      where: { id, deletedAt: null },
+      include: {
+        departamento: true,
+        localizacao: true,
+        movimentacoes: { orderBy: { createdDate: "desc" }, include: { actor: true, computador: true, monitor: true } },
+      },
+    }),
+    listGroupMembers("COMPUTER", id),
+    listAgrupamentoCandidates(),
+  ]);
   if (!computer) notFound();
   const warranty = computeWarranty({
     dataRecebimento: computer.dataRecebimento,
@@ -107,22 +112,11 @@ export default async function ComputerDetailPage({ params }: { params: Promise<{
         </dl>
       </section>
 
-      <section className="surface p-5">
-        <h2 className="mb-4 text-sm font-semibold">Periféricos</h2>
-        {computer.monitores.length ? (
-          <ul className="divide-y divide-line">
-            {computer.monitores.map((monitor) => (
-              <li key={monitor.id} className="flex items-center justify-between py-3 text-sm">
-                <Link href={`/monitores/${monitor.id}`} className="font-medium text-brand hover:underline">{monitor.tombo}</Link>
-                <span className="text-slate-500">{monitor.modelo || "Monitor"}</span>
-                <StatusBadge status={monitor.status} />
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="text-sm text-slate-500">Nenhum monitor associado.</p>
-        )}
-      </section>
+      <GrupoEquipamentos
+        current={{ kind: "COMPUTER", id: computer.id, tombo: computer.tombo }}
+        members={members.map(toClientGroupMember)}
+        candidates={candidates}
+      />
 
       <section className="surface p-5">
         <h2 className="mb-4 text-sm font-semibold">Histórico</h2>

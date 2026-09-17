@@ -24,10 +24,10 @@ type Row = {
   usuario: string | null;
   departamento: { id: string; nome: string; codigo?: string } | null;
   localizacao: { id: string; nome: string; cidade: string; uf: string | null } | null;
-  _count: { monitores: number };
+  agrupados: number;
 };
 
-type Col = "tombo" | "modelo" | "usuario" | "setor" | "predio" | "status" | "monitores";
+type Col = "tombo" | "modelo" | "usuario" | "setor" | "predio" | "status" | "agrupados";
 
 function cell(row: Row, col: Col) {
   if (col === "tombo") return row.tombo || EMPTY_FILTER;
@@ -36,7 +36,7 @@ function cell(row: Row, col: Col) {
   if (col === "setor") return setorLabel(row.departamento) || EMPTY_FILTER;
   if (col === "predio") return formatPredio(row.localizacao) || EMPTY_FILTER;
   if (col === "status") return statusLabel(row.status);
-  return String(row._count.monitores);
+  return String(row.agrupados);
 }
 
 const COLUMNS: Array<[Col, string, "left" | "right"]> = [
@@ -46,7 +46,7 @@ const COLUMNS: Array<[Col, string, "left" | "right"]> = [
   ["setor", "Setor", "left"],
   ["predio", "Prédio", "left"],
   ["status", "Status", "right"],
-  ["monitores", "Monitores", "right"],
+  ["agrupados", "Agrupados", "right"],
 ];
 
 export function ComputerTable({
@@ -117,7 +117,7 @@ export function ComputerTable({
                 <td className="px-4 py-3 text-slate-600">{setorLabel(row.departamento) || "—"}</td>
                 <td className="px-4 py-3 text-slate-600">{formatPredio(row.localizacao) || "—"}</td>
                 <td className="px-4 py-3"><StatusBadge status={row.status} /></td>
-                <td className="px-4 py-3 text-slate-600">{row._count.monitores}</td>
+                <td className="px-4 py-3 text-slate-600">{row.agrupados}</td>
                 <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
                   <div className="inline-flex items-center gap-0.5">
                     <button

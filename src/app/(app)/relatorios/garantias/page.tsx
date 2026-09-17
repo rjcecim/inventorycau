@@ -22,10 +22,7 @@ export default async function RelatorioGarantiasPage({
     }),
     prisma.monitor.findMany({
       where: { deletedAt: null },
-      include: {
-        departamento: true,
-        computador: { include: { departamento: true } },
-      },
+      include: { departamento: true },
       orderBy: { tombo: "asc" },
     }),
     prisma.departamento.findMany({ orderBy: [{ sortOrder: "asc" }, { nome: "asc" }] }),
@@ -52,7 +49,7 @@ export default async function RelatorioGarantiasPage({
         tombo: item.tombo,
         fabricante: item.fabricante,
         modelo: item.modelo,
-        setorId: item.computador?.departamentoId ?? item.departamentoId,
+        setorId: item.departamentoId,
         setorLabel: setorLabel(aloc.departamento),
         dataNotaFiscal: toInputDate(item.dataNotaFiscal) || null,
         dataRecebimento: toInputDate(item.dataRecebimento) || null,

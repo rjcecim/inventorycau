@@ -11,6 +11,18 @@ import { formatPredio } from "@/lib/predios";
 import { parseAcquisitionFromForm } from "@/lib/acquisition-form";
 import { formatTomboRangeLabel, parseTomboRange } from "@/lib/tombo-range";
 import { releaseDeletedTombos, retireAssetKeys } from "@/lib/tombo-reuse";
+import { detachOnDelete, GROUP_TX, prismaGroupStore, revalidateGroupMembers, syncAllocationFromOriginator } from "@/lib/equipamento-grupo";
+import { statusLabel } from "@/lib/status";
+
+const statusEnum = z.enum([
+  "IN_USE",
+  "AVAILABLE",
+  "RESERVE",
+  "MAINTENANCE",
+  "AWAITING_INSTALL",
+  "DISPOSED",
+  "INACTIVE",
+]);
 
 const schema = z.object({
   id: z.string().optional(),
@@ -21,20 +33,11 @@ const schema = z.object({
   tamanho: z.string().max(40).nullable(),
   resolucao: z.string().max(40).nullable(),
   conexoes: z.string().max(80).nullable(),
-  status: z.enum([
-    "IN_USE",
-    "AVAILABLE",
-    "RESERVE",
-    "MAINTENANCE",
-    "AWAITING_INSTALL",
-    "DISPOSED",
-    "INACTIVE",
-  ]),
+  status: statusEnum,
   observacoes: z.string().max(1000).nullable(),
   servidorId: z.string().nullable(),
   departamentoId: z.string().nullable(),
   localizacaoId: z.string().nullable(),
-  computadorId: z.string().nullable(),
 });
 
 function fromForm(formData: FormData) {
@@ -52,7 +55,6 @@ function fromForm(formData: FormData) {
     servidorId: emptyToNull(formData.get("servidorId")),
     departamentoId: emptyToNull(formData.get("departamentoId")),
     localizacaoId: emptyToNull(formData.get("localizacaoId")),
-    computadorId: emptyToNull(formData.get("computadorId")),
   });
 }
 
@@ -79,36 +81,26 @@ export async function saveMonitor(_: unknown, formData: FormData) {
   const acq = acquisition.data;
 
   try {
-    const computador = data.computadorId
-      ? await prisma.computador.findUnique({ where: { id: data.computadorId } })
-      : null;
-    if (data.computadorId && !computador) return { error: "Computador não encontrado." };
-
-    const servidor = !computador && data.servidorId
+    const servidor = data.servidorId
       ? await prisma.servidor.findUnique({ where: { id: data.servidorId } })
       : null;
-
-    const usuario = computador?.usuario ?? servidor?.nome ?? null;
-    const servidorId = computador?.servidorId ?? data.servidorId;
-    const departamentoId = computador?.departamentoId ?? data.departamentoId;
-    const localizacaoId = computador?.localizacaoId ?? data.localizacaoId;
-    const status = computador?.status ?? data.status;
+    const usuario = servidor?.nome ?? null;
 
     let savedId = data.id;
     if (data.id) {
       const current = await prisma.monitor.findUnique({
         where: { id: data.id },
-        include: { departamento: true, localizacao: true, computador: true },
+        include: { departamento: true, localizacao: true },
       });
       if (!current) return { error: "Monitor não encontrado." };
-      const nextDept = departamentoId
-        ? await prisma.departamento.findUnique({ where: { id: departamentoId } })
+      const nextDept = data.departamentoId
+        ? await prisma.departamento.findUnique({ where: { id: data.departamentoId } })
         : null;
-      const nextLoc = localizacaoId
-        ? await prisma.localizacao.findUnique({ where: { id: localizacaoId } })
+      const nextLoc = data.localizacaoId
+        ? await prisma.localizacao.findUnique({ where: { id: data.localizacaoId } })
         : null;
 
-      await prisma.$transaction(async (tx) => {
+      const linked = await prisma.$transaction(async (tx) => {
         await tx.monitor.update({
           where: { id: data.id },
           data: {
@@ -119,13 +111,12 @@ export async function saveMonitor(_: unknown, formData: FormData) {
             tamanho: data.tamanho,
             resolucao: data.resolucao,
             conexoes: data.conexoes,
-            status,
+            status: data.status,
             observacoes: data.observacoes,
             usuario,
-            servidorId,
-            departamentoId,
-            localizacaoId,
-            computadorId: data.computadorId,
+            servidorId: data.servidorId,
+            departamentoId: data.departamentoId,
+            localizacaoId: data.localizacaoId,
             dataNotaFiscal: acq.dataNotaFiscal,
             dataRecebimento: acq.dataRecebimento,
             prazoGarantiaAnos: acq.prazoGarantiaAnos,
@@ -137,15 +128,32 @@ export async function saveMonitor(_: unknown, formData: FormData) {
           monitorId: data.id,
           actorId: session.user.id,
           changes: [
-            { campo: "status", anterior: current.status, novo: status },
+            { campo: "status", anterior: current.status, novo: data.status },
             { campo: "departamento", anterior: current.departamento?.nome, novo: nextDept?.nome },
             { campo: "localizacao", anterior: formatPredio(current.localizacao), novo: formatPredio(nextLoc) },
             { campo: "usuario", anterior: current.usuario, novo: usuario },
-            { campo: "computador", anterior: current.computador?.tombo, novo: computador?.tombo },
             { campo: "tombo", anterior: current.tombo, novo: data.tombo },
           ],
         });
-      });
+        return syncAllocationFromOriginator(tx, {
+          originator: { kind: "MONITOR", id: current.id },
+          previous: {
+            usuario: current.usuario,
+            departamento: current.departamento?.nome ?? null,
+            localizacao: formatPredio(current.localizacao),
+            status: statusLabel(current.status),
+          },
+          next: {
+            usuario,
+            servidorId: data.servidorId,
+            departamentoId: data.departamentoId,
+            localizacaoId: data.localizacaoId,
+            status: data.status,
+          },
+          actorId: session.user.id,
+        });
+      }, GROUP_TX);
+      await revalidateGroupMembers(linked);
     } else {
       const created = await prisma.$transaction(async (tx) => {
         const released = await releaseDeletedTombos(tx, AssetKind.MONITOR, [data.tombo]);
@@ -159,13 +167,12 @@ export async function saveMonitor(_: unknown, formData: FormData) {
             tamanho: data.tamanho,
             resolucao: data.resolucao,
             conexoes: data.conexoes,
-            status,
+            status: data.status,
             observacoes: data.observacoes,
             usuario,
-            servidorId,
-            departamentoId,
-            localizacaoId,
-            computadorId: data.computadorId,
+            servidorId: data.servidorId,
+            departamentoId: data.departamentoId,
+            localizacaoId: data.localizacaoId,
             dataNotaFiscal: acq.dataNotaFiscal,
             dataRecebimento: acq.dataRecebimento,
             prazoGarantiaAnos: acq.prazoGarantiaAnos,
@@ -197,7 +204,7 @@ export async function createMonitoresLote(_: unknown, formData: FormData) {
   const range = parseTomboRange(String(formData.get("tomboInicio") ?? ""), String(formData.get("tomboFim") ?? ""));
   if ("error" in range) return { error: range.error };
 
-  const parsed = schema.omit({ id: true, tombo: true, serialNumber: true, computadorId: true }).safeParse({
+  const parsed = schema.omit({ id: true, tombo: true, serialNumber: true }).safeParse({
     fabricante: emptyToNull(formData.get("fabricante")),
     modelo: emptyToNull(formData.get("modelo")),
     tamanho: emptyToNull(formData.get("tamanho")),
@@ -249,7 +256,6 @@ export async function createMonitoresLote(_: unknown, formData: FormData) {
           servidorId: data.servidorId,
           departamentoId: data.departamentoId,
           localizacaoId: data.localizacaoId,
-          computadorId: null,
           dataNotaFiscal: acq.dataNotaFiscal,
           dataRecebimento: acq.dataRecebimento,
           prazoGarantiaAnos: acq.prazoGarantiaAnos,
@@ -276,19 +282,10 @@ export async function updateAlocacaoMonitor(_: unknown, formData: FormData) {
   const parsed = z
     .object({
       id: z.string().min(1),
-      status: z.enum([
-        "IN_USE",
-        "AVAILABLE",
-        "RESERVE",
-        "MAINTENANCE",
-        "AWAITING_INSTALL",
-        "DISPOSED",
-        "INACTIVE",
-      ]),
+      status: statusEnum,
       servidorId: z.string().nullable(),
       departamentoId: z.string().nullable(),
       localizacaoId: z.string().nullable(),
-      computadorId: z.string().nullable(),
     })
     .safeParse({
       id: String(formData.get("id") ?? ""),
@@ -296,7 +293,6 @@ export async function updateAlocacaoMonitor(_: unknown, formData: FormData) {
       servidorId: emptyToNull(formData.get("servidorId")),
       departamentoId: emptyToNull(formData.get("departamentoId")),
       localizacaoId: emptyToNull(formData.get("localizacaoId")),
-      computadorId: emptyToNull(formData.get("computadorId")),
     });
   if (!parsed.success) return { error: parsed.error.issues[0].message };
 
@@ -304,42 +300,30 @@ export async function updateAlocacaoMonitor(_: unknown, formData: FormData) {
   try {
     const current = await prisma.monitor.findFirst({
       where: { id: data.id, deletedAt: null },
-      include: { departamento: true, localizacao: true, computador: true },
+      include: { departamento: true, localizacao: true },
     });
     if (!current) return { error: "Monitor não encontrado." };
 
-    const computador = data.computadorId
-      ? await prisma.computador.findUnique({ where: { id: data.computadorId } })
-      : null;
-    if (data.computadorId && !computador) return { error: "Computador não encontrado." };
-
-    const servidor = !computador && data.servidorId
+    const servidor = data.servidorId
       ? await prisma.servidor.findUnique({ where: { id: data.servidorId } })
       : null;
-
-    const usuario = computador?.usuario ?? servidor?.nome ?? null;
-    const servidorId = computador?.servidorId ?? data.servidorId;
-    const departamentoId = computador?.departamentoId ?? data.departamentoId;
-    const localizacaoId = computador?.localizacaoId ?? data.localizacaoId;
-    const status = computador?.status ?? data.status;
-
-    const nextDept = departamentoId
-      ? await prisma.departamento.findUnique({ where: { id: departamentoId } })
+    const usuario = servidor?.nome ?? null;
+    const nextDept = data.departamentoId
+      ? await prisma.departamento.findUnique({ where: { id: data.departamentoId } })
       : null;
-    const nextLoc = localizacaoId
-      ? await prisma.localizacao.findUnique({ where: { id: localizacaoId } })
+    const nextLoc = data.localizacaoId
+      ? await prisma.localizacao.findUnique({ where: { id: data.localizacaoId } })
       : null;
 
-    await prisma.$transaction(async (tx) => {
+    const linked = await prisma.$transaction(async (tx) => {
       await tx.monitor.update({
         where: { id: data.id },
         data: {
-          status,
+          status: data.status,
           usuario,
-          servidorId,
-          departamentoId,
-          localizacaoId,
-          computadorId: data.computadorId,
+          servidorId: data.servidorId,
+          departamentoId: data.departamentoId,
+          localizacaoId: data.localizacaoId,
         },
       });
       await logChanges({
@@ -348,17 +332,34 @@ export async function updateAlocacaoMonitor(_: unknown, formData: FormData) {
         monitorId: data.id,
         actorId: session.user.id,
         changes: [
-          { campo: "status", anterior: current.status, novo: status },
+          { campo: "status", anterior: current.status, novo: data.status },
           { campo: "departamento", anterior: current.departamento?.nome, novo: nextDept?.nome },
           { campo: "localizacao", anterior: formatPredio(current.localizacao), novo: formatPredio(nextLoc) },
           { campo: "usuario", anterior: current.usuario, novo: usuario },
-          { campo: "computador", anterior: current.computador?.tombo, novo: computador?.tombo },
         ],
       });
-    });
+      return syncAllocationFromOriginator(tx, {
+        originator: { kind: "MONITOR", id: data.id },
+        previous: {
+          usuario: current.usuario,
+          departamento: current.departamento?.nome ?? null,
+          localizacao: formatPredio(current.localizacao),
+          status: statusLabel(current.status),
+        },
+        next: {
+          usuario,
+          servidorId: data.servidorId,
+          departamentoId: data.departamentoId,
+          localizacaoId: data.localizacaoId,
+          status: data.status,
+        },
+        actorId: session.user.id,
+      });
+    }, GROUP_TX);
 
     refresh();
     revalidatePath(`/monitores/${data.id}`);
+    await revalidateGroupMembers(linked);
     return { success: true, id: data.id };
   } catch {
     return { error: "Não foi possível atualizar a alocação." };
@@ -369,10 +370,13 @@ export async function deleteMonitor(id: string) {
   const session = await requireAdmin();
   const current = await prisma.monitor.findUnique({ where: { id } });
   if (!current) return { error: "Monitor não encontrado." };
-  await prisma.monitor.update({
-    where: { id },
-    data: { deletedAt: new Date(), status: "INACTIVE", computadorId: null, ...retireAssetKeys(id, current.tombo, current.serialNumber) },
-  });
+  await prisma.$transaction(async (tx) => {
+    await detachOnDelete(prismaGroupStore(tx), { kind: "MONITOR", id }, session.user.id);
+    await tx.monitor.update({
+      where: { id },
+      data: { deletedAt: new Date(), status: "INACTIVE", groupId: null, ...retireAssetKeys(id, current.tombo, current.serialNumber) },
+    });
+  }, GROUP_TX);
   await logChanges({
     kind: AssetKind.MONITOR,
     monitorId: id,
