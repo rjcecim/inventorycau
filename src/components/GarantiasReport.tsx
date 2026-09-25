@@ -15,10 +15,11 @@ import {
   todayCalendar,
 } from "@/lib/dates";
 import { computeWarranty, matchesWarrantyFilter, type WarrantySituation } from "@/lib/garantia";
+import { inventoryKindHref, inventoryKindLabel } from "@/lib/inventory-kind";
 
 export type GarantiaRow = {
   id: string;
-  kind: "COMPUTER" | "MONITOR";
+  kind: "COMPUTER" | "NOTEBOOK" | "MONITOR";
   tombo: string;
   fabricante: string | null;
   modelo: string | null;
@@ -58,7 +59,7 @@ const COLUMNS: Array<[Col, string, "left" | "right"]> = [
 
 function cell(row: Enriched, col: Col) {
   if (col === "tombo") return row.tombo || EMPTY_FILTER;
-  if (col === "tipo") return row.kind === "COMPUTER" ? "Computador" : "Monitor";
+  if (col === "tipo") return inventoryKindLabel(row.kind);
   if (col === "modelo") return row.modelo || EMPTY_FILTER;
   if (col === "setor") return row.setorLabel || EMPTY_FILTER;
   if (col === "notaFiscal") return formatCalendarDate(parseIsoDate(row.dataNotaFiscal ?? ""));
@@ -140,6 +141,7 @@ export function GarantiasReport({
           <select className="w-full rounded-xl border border-line bg-white px-3.5 py-2.5 text-sm" value={tipo} onChange={(e) => setTipo(e.target.value)}>
             <option value="todos">Todos</option>
             <option value="COMPUTER">Computador</option>
+            <option value="NOTEBOOK">Notebook</option>
             <option value="MONITOR">Monitor</option>
           </select>
         </Field>
@@ -177,7 +179,7 @@ export function GarantiasReport({
                 ["Patrimônio", "Tipo", "Modelo", "Setor", "Nota fiscal", "Recebimento", "Prazo", "Vencimento", "Situação", "Dias"],
                 filtered.map((row) => [
                   row.tombo,
-                  row.kind === "COMPUTER" ? "Computador" : "Monitor",
+                  inventoryKindLabel(row.kind),
                   row.modelo ?? "",
                   row.setorLabel,
                   formatCalendarDate(parseIsoDate(row.dataNotaFiscal ?? "")),
@@ -237,11 +239,11 @@ export function GarantiasReport({
             {filtered.map((row) => (
               <tr key={`${row.kind}-${row.id}`} className="border-b border-line">
                 <td className="px-4 py-3 font-medium">
-                  <Link className="text-brand hover:underline" href={row.kind === "COMPUTER" ? `/computadores/${row.id}` : `/monitores/${row.id}`}>
+                  <Link className="text-brand hover:underline" href={inventoryKindHref(row.kind, row.id)}>
                     {row.tombo}
                   </Link>
                 </td>
-                <td className="px-4 py-3 text-slate-600">{row.kind === "COMPUTER" ? "Computador" : "Monitor"}</td>
+                <td className="px-4 py-3 text-slate-600">{inventoryKindLabel(row.kind)}</td>
                 <td className="px-4 py-3 text-slate-600">{row.modelo || "—"}</td>
                 <td className="px-4 py-3 text-slate-600">{row.setorLabel || "—"}</td>
                 <td className="px-4 py-3 text-slate-600">{formatCalendarDate(parseIsoDate(row.dataNotaFiscal ?? ""))}</td>

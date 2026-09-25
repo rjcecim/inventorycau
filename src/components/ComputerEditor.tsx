@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { ComputerForm } from "@/components/ComputerForm";
+import { variantCopy, type ComputerVariant } from "@/lib/inventory-kind";
 
 type Props = {
   computer?: Parameters<typeof ComputerForm>[0]["computer"];
@@ -9,10 +10,12 @@ type Props = {
   locations: Parameters<typeof ComputerForm>[0]["locations"];
   people: NonNullable<Parameters<typeof ComputerForm>[0]["people"]>;
   cancelHref: string;
+  variant?: ComputerVariant;
 };
 
-export function ComputerEditor({ computer, departments, locations, people, cancelHref }: Props) {
+export function ComputerEditor({ computer, departments, locations, people, cancelHref, variant = "DESKTOP" }: Props) {
   const router = useRouter();
+  const copy = variantCopy(variant);
   return (
     <div className="surface p-5 sm:p-6">
       <ComputerForm
@@ -21,7 +24,8 @@ export function ComputerEditor({ computer, departments, locations, people, cance
         locations={locations}
         people={people}
         cancelHref={cancelHref}
-        onSuccess={(id) => router.push(id ? `/computadores/${id}` : "/computadores")}
+        variant={variant}
+        onSuccess={(id) => router.push(id ? `${copy.basePath}/${id}` : copy.basePath)}
       />
     </div>
   );

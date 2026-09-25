@@ -9,6 +9,7 @@ import { emptyToNull } from "@/lib/utils";
 function refresh() {
   revalidatePath("/usuarios");
   revalidatePath("/computadores");
+  revalidatePath("/notebooks");
   revalidatePath("/monitores");
   revalidatePath("/");
 }

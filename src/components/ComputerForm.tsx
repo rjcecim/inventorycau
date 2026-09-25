@@ -13,6 +13,7 @@ import { SearchSelect } from "@/components/ui/SearchSelect";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { STATUS_OPTIONS } from "@/lib/status";
 import { formatPredio } from "@/lib/predios";
+import { variantCopy, type ComputerVariant } from "@/lib/inventory-kind";
 
 type Option = { id: string; nome: string; codigo?: string; cidade?: string | null; uf?: string | null };
 type PersonOption = { id: string; nome: string; matricula?: string | null };
@@ -24,6 +25,7 @@ export function ComputerForm({
   people = [],
   cancelHref,
   onSuccess,
+  variant = "DESKTOP",
 }: {
   computer?: {
     id: string;
@@ -49,7 +51,9 @@ export function ComputerForm({
   people?: PersonOption[];
   cancelHref?: string;
   onSuccess?: (id?: string) => void;
+  variant?: ComputerVariant;
 }) {
+  const copy = variantCopy(variant);
   const isCreate = !computer;
   const {
     mode,
@@ -79,6 +83,7 @@ export function ComputerForm({
     <>
       <form ref={formRef} action={action} onSubmit={onSubmit} className="grid gap-4">
         {computer ? <input type="hidden" name="id" value={computer.id} /> : null}
+        <input type="hidden" name="tipo" value={copy.tipo} />
         {lote ? <input type="hidden" name="cadastroModo" value="lote" /> : null}
         {lote && confirmToken ? <input type="hidden" name="loteConfirmado" value="1" /> : null}
         {isCreate ? (
@@ -119,7 +124,7 @@ export function ComputerForm({
             <TextInput name="fabricante" defaultValue={computer?.fabricante ?? ""} placeholder="Dell" />
           </Field>
           <Field label="Modelo" hint="opcional">
-            <TextInput name="modelo" defaultValue={computer?.modelo ?? ""} placeholder="OptiPlex 7010" />
+            <TextInput name="modelo" defaultValue={computer?.modelo ?? ""} placeholder={copy.modeloPlaceholder} />
           </Field>
         </div>
         <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Alocação</p>
@@ -166,7 +171,7 @@ export function ComputerForm({
           <Field label="Armazenamento"><TextInput name="armazenamento" defaultValue={computer?.armazenamento ?? ""} placeholder="500 GB HDD" /></Field>
         </div>
         <AcquisitionFields
-          kind="COMPUTER"
+          kind={copy.modernizationKind}
           values={{
             dataNotaFiscal: computer?.dataNotaFiscal,
             dataRecebimento: computer?.dataRecebimento,
@@ -196,7 +201,7 @@ export function ComputerForm({
         open={confirmOpen}
         onClose={() => setConfirmOpen(false)}
         onConfirm={confirm}
-        noun="computadores"
+        noun={copy.nounPlural}
         rangeLabel={rangeLabel}
       />
     </>

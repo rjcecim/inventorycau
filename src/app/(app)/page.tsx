@@ -9,6 +9,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { formatPredio } from "@/lib/predios";
 import { setorLabel } from "@/lib/alocacao";
 import { computeWarranty } from "@/lib/garantia";
+import { desktopWhere, notebookWhere } from "@/lib/inventory-kind";
 import { buildModernizationIndexes } from "@/lib/modernizacao";
 import type { AssetStatus } from "@prisma/client";
 
@@ -28,9 +29,12 @@ function emptyWarrantyCounts() {
 
 export default async function DashboardPage() {
   const where = { deletedAt: null } as const;
+  const desktop = { ...where, ...desktopWhere() };
+  const notebook = { ...where, ...notebookWhere() };
 
   const [
     computerStatus,
+    notebookStatus,
     monitorStatus,
     byDeptPc,
     byLocationPc,
@@ -43,34 +47,40 @@ export default async function DashboardPage() {
     computersForGroups,
     monitorsForDist,
     computersLifecycle,
+    notebooksLifecycle,
     monitorsLifecycle,
   ] = await Promise.all([
-    prisma.computador.groupBy({ by: ["status"], where, _count: { _all: true } }),
+    prisma.computador.groupBy({ by: ["status"], where: desktop, _count: { _all: true } }),
+    prisma.computador.groupBy({ by: ["status"], where: notebook, _count: { _all: true } }),
     prisma.monitor.groupBy({ by: ["status"], where, _count: { _all: true } }),
-    prisma.computador.groupBy({ by: ["departamentoId"], where, _count: { _all: true } }),
-    prisma.computador.groupBy({ by: ["localizacaoId"], where, _count: { _all: true } }),
+    prisma.computador.groupBy({ by: ["departamentoId"], where: desktop, _count: { _all: true } }),
+    prisma.computador.groupBy({ by: ["localizacaoId"], where: desktop, _count: { _all: true } }),
     prisma.movimentacao.findMany({
       orderBy: { createdDate: "desc" },
       include: { actor: true, computador: true, monitor: true },
     }),
     prisma.departamento.findMany({ orderBy: { sortOrder: "asc" } }),
     prisma.localizacao.findMany(),
-    prisma.computador.count({ where: { ...where, departamentoId: null } }),
-    prisma.computador.count({ where: { ...where, localizacaoId: null } }),
+    prisma.computador.count({ where: { ...desktop, departamentoId: null } }),
+    prisma.computador.count({ where: { ...desktop, localizacaoId: null } }),
     prisma.computador.count({
       where: {
-        ...where,
+        ...desktop,
         servidorId: null,
         OR: [{ usuario: null }, { usuario: "" }],
       },
     }),
-    prisma.computador.findMany({ where, select: { groupId: true } }),
+    prisma.computador.findMany({ where: desktop, select: { groupId: true } }),
     prisma.monitor.findMany({
       where,
       select: { groupId: true, departamentoId: true, localizacaoId: true },
     }),
     prisma.computador.findMany({
-      where,
+      where: desktop,
+      select: { dataRecebimento: true, prazoGarantiaAnos: true },
+    }),
+    prisma.computador.findMany({
+      where: notebook,
       select: { dataRecebimento: true, prazoGarantiaAnos: true },
     }),
     prisma.monitor.findMany({
@@ -80,6 +90,7 @@ export default async function DashboardPage() {
   ]);
 
   const pcWarranty = emptyWarrantyCounts();
+  const nbWarranty = emptyWarrantyCounts();
   const monWarranty = emptyWarrantyCounts();
   for (const item of computersLifecycle) {
     const w = computeWarranty({
@@ -90,6 +101,16 @@ export default async function DashboardPage() {
     else if (w.situation === "vence_90") pcWarranty.vence90 += 1;
     else if (w.situation === "vencida") pcWarranty.vencida += 1;
     else pcWarranty.incompleto += 1;
+  }
+  for (const item of notebooksLifecycle) {
+    const w = computeWarranty({
+      dataRecebimento: item.dataRecebimento,
+      prazoGarantiaAnos: item.prazoGarantiaAnos,
+    });
+    if (w.situation === "vigente") nbWarranty.vigente += 1;
+    else if (w.situation === "vence_90") nbWarranty.vence90 += 1;
+    else if (w.situation === "vencida") nbWarranty.vencida += 1;
+    else nbWarranty.incompleto += 1;
   }
   for (const item of monitorsLifecycle) {
     const w = computeWarranty({
@@ -104,6 +125,7 @@ export default async function DashboardPage() {
 
   const modernizationIndexes = buildModernizationIndexes([
     ...computersLifecycle.map((item) => ({ kind: "COMPUTER" as const, dataRecebimento: item.dataRecebimento })),
+    ...notebooksLifecycle.map((item) => ({ kind: "NOTEBOOK" as const, dataRecebimento: item.dataRecebimento })),
     ...monitorsLifecycle.map((item) => ({ kind: "MONITOR" as const, dataRecebimento: item.dataRecebimento })),
   ]);
 
@@ -115,13 +137,17 @@ export default async function DashboardPage() {
   ).length;
 
   const computerTotal = computerStatus.reduce((sum, row) => sum + row._count._all, 0);
+  const notebookTotal = notebookStatus.reduce((sum, row) => sum + row._count._all, 0);
   const monitorTotal = monitorStatus.reduce((sum, row) => sum + row._count._all, 0);
   const pcInUse = countStatus(computerStatus, "IN_USE");
   const pcReserve = countStatus(computerStatus, "RESERVE");
   const maintenance =
-    countStatus(computerStatus, "MAINTENANCE") + countStatus(monitorStatus, "MAINTENANCE");
+    countStatus(computerStatus, "MAINTENANCE") +
+    countStatus(notebookStatus, "MAINTENANCE") +
+    countStatus(monitorStatus, "MAINTENANCE");
   const awaiting =
     countStatus(computerStatus, "AWAITING_INSTALL") +
+    countStatus(notebookStatus, "AWAITING_INSTALL") +
     countStatus(monitorStatus, "AWAITING_INSTALL");
 
   const deptMap = Object.fromEntries(departments.map((d) => [d.id, setorLabel(d) || d.nome]));
@@ -159,11 +185,13 @@ export default async function DashboardPage() {
   const statusSplit = STATUS_ORDER.map((status) => ({
     label: statusLabel(status),
     computers: countStatus(computerStatus, status),
+    notebooks: countStatus(notebookStatus, status),
     monitors: countStatus(monitorStatus, status),
   }));
 
   const kpis = [
     { href: "/computadores", label: "Computadores", value: computerTotal, hint: null as string | null },
+    { href: "/notebooks", label: "Notebooks", value: notebookTotal, hint: null },
     { href: "/monitores", label: "Monitores", value: monitorTotal, hint: null },
     { href: "/computadores?status=IN_USE", label: "Em uso (PC)", value: pcInUse, hint: null },
     { href: "/computadores?status=RESERVE", label: "Reserva (PC)", value: pcReserve, hint: null },
@@ -171,13 +199,13 @@ export default async function DashboardPage() {
       href: "/relatorios?tipo=manutencao",
       label: "Manutenção",
       value: maintenance,
-      hint: `${countStatus(computerStatus, "MAINTENANCE")} PC · ${countStatus(monitorStatus, "MAINTENANCE")} mon.`,
+      hint: `${countStatus(computerStatus, "MAINTENANCE")} PC · ${countStatus(notebookStatus, "MAINTENANCE")} nb · ${countStatus(monitorStatus, "MAINTENANCE")} mon.`,
     },
     {
       href: "/relatorios?tipo=aguardando",
       label: "Aguardando instalação",
       value: awaiting,
-      hint: `${countStatus(computerStatus, "AWAITING_INSTALL")} PC · ${countStatus(monitorStatus, "AWAITING_INSTALL")} mon.`,
+      hint: `${countStatus(computerStatus, "AWAITING_INSTALL")} PC · ${countStatus(notebookStatus, "AWAITING_INSTALL")} nb · ${countStatus(monitorStatus, "AWAITING_INSTALL")} mon.`,
     },
   ];
 
@@ -193,7 +221,7 @@ export default async function DashboardPage() {
     },
     {
       label: "Em reserva",
-      value: countStatus(computerStatus, "RESERVE") + countStatus(monitorStatus, "RESERVE"),
+      value: countStatus(computerStatus, "RESERVE") + countStatus(notebookStatus, "RESERVE") + countStatus(monitorStatus, "RESERVE"),
       href: "/relatorios?tipo=reserva",
     },
     { label: "Em manutenção", value: maintenance, href: "/relatorios?tipo=manutencao" },
@@ -206,7 +234,7 @@ export default async function DashboardPage() {
         title="Dashboard"
         description="Visão operacional do parque: totais, pendências de alocação e distribuição por setor e prédio."
       />
-      <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-6">
+      <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-7">
         {kpis.map((kpi) => (
           <Link
             key={kpi.label}
@@ -223,12 +251,18 @@ export default async function DashboardPage() {
       <div className="mb-6 grid gap-4 lg:grid-cols-2">
         <GarantiasDashboardCard
           vigente={
-            pcWarranty.vigente + pcWarranty.vence90 + monWarranty.vigente + monWarranty.vence90
+            pcWarranty.vigente +
+            pcWarranty.vence90 +
+            nbWarranty.vigente +
+            nbWarranty.vence90 +
+            monWarranty.vigente +
+            monWarranty.vence90
           }
-          vence90={pcWarranty.vence90 + monWarranty.vence90}
-          vencida={pcWarranty.vencida + monWarranty.vencida}
-          incompleto={pcWarranty.incompleto + monWarranty.incompleto}
+          vence90={pcWarranty.vence90 + nbWarranty.vence90 + monWarranty.vence90}
+          vencida={pcWarranty.vencida + nbWarranty.vencida + monWarranty.vencida}
+          incompleto={pcWarranty.incompleto + nbWarranty.incompleto + monWarranty.incompleto}
           pc={pcWarranty}
+          nb={nbWarranty}
           mon={monWarranty}
         />
         <ModernizacaoDashboardCard indexes={modernizationIndexes} />
@@ -236,7 +270,7 @@ export default async function DashboardPage() {
 
       <div className="mb-6 grid gap-4 lg:grid-cols-3">
         <AttentionList items={pendencias} />
-        <StatusSplitCard title="Status (PC × Monitor)" statuses={statusSplit} />
+        <StatusSplitCard title="Status (PC × Notebook × Monitor)" statuses={statusSplit} />
         <DistributionCard title="Computadores por setor" items={pcByDept} />
       </div>
 

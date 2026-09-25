@@ -9,6 +9,7 @@ datasource db {
 
 enum Role {
   ADMIN
+  TECH
   USER
 }
 
@@ -24,7 +25,13 @@ enum AssetStatus {
 
 enum AssetKind {
   COMPUTER
+  NOTEBOOK
   MONITOR
+}
+
+enum ComputerType {
+  DESKTOP
+  NOTEBOOK
 }
 
 model User {
@@ -97,6 +104,7 @@ model Computador {
   id                String         @id @default(cuid())
   tombo             String         @unique
   serialNumber      String?        @unique @map("serial_number")
+  tipo              ComputerType   @default(DESKTOP)
   fabricante        String?
   modelo            String?
   status            AssetStatus    @default(AVAILABLE)
@@ -122,6 +130,7 @@ model Computador {
 
   @@index([modelo])
   @@index([status])
+  @@index([tipo])
   @@index([departamentoId])
   @@index([localizacaoId])
   @@index([servidorId])

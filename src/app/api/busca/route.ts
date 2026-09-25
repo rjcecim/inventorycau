@@ -1,6 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
+import { inventoryKindHref, inventoryKindLabel, variantInventoryKind } from "@/lib/inventory-kind";
 import { prisma } from "@/lib/prisma";
+
+function computerResult(item: {
+  id: string;
+  tipo: string;
+  tombo: string;
+  serialNumber: string | null;
+  usuario: string | null;
+  modelo: string | null;
+}) {
+  const kind = variantInventoryKind(item.tipo === "NOTEBOOK" ? "NOTEBOOK" : "DESKTOP");
+  return {
+    id: item.id,
+    type: inventoryKindLabel(kind),
+    title: item.tombo,
+    subtitle: [item.tombo, item.serialNumber, item.usuario, item.modelo].filter(Boolean).join(" · "),
+    href: inventoryKindHref(kind, item.id),
+  };
+}
 
 export async function GET(request: NextRequest) {
   const session = await auth();
@@ -14,11 +33,8 @@ export async function GET(request: NextRequest) {
     ]);
     return NextResponse.json([
       ...computers.map((item) => ({
-        id: item.id,
-        type: "Computador",
-        title: item.tombo,
+        ...computerResult(item),
         subtitle: [item.tombo, item.usuario].filter(Boolean).join(" · "),
-        href: `/computadores/${item.id}`,
       })),
       ...monitors.map((item) => ({
         id: item.id,
@@ -62,13 +78,7 @@ export async function GET(request: NextRequest) {
   ]);
 
   return NextResponse.json([
-    ...computers.map((item) => ({
-      id: item.id,
-      type: "Computador",
-      title: item.tombo,
-      subtitle: [item.tombo, item.serialNumber, item.usuario].filter(Boolean).join(" · "),
-      href: `/computadores/${item.id}`,
-    })),
+    ...computers.map(computerResult),
     ...monitors.map((item) => ({
       id: item.id,
       type: "Monitor",

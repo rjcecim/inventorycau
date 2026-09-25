@@ -14,10 +14,15 @@ function usuarioLabel(item: { servidor?: { nome: string } | null; usuario?: stri
 
 export const dynamic = "force-dynamic";
 
-export default async function VisaoGeralPage() {
+export default async function VisaoGeralPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ setor?: string }>;
+}) {
+  const { setor } = await searchParams;
   const [computers, monitors] = await Promise.all([
     prisma.computador.findMany({
-      where: { deletedAt: null },
+      where: { deletedAt: null, tipo: "DESKTOP" },
       include: { departamento: true, localizacao: true, servidor: true },
       orderBy: { tombo: "asc" },
     }),
@@ -63,8 +68,8 @@ export default async function VisaoGeralPage() {
       modeloComputador: group.computers.map(assetModelo).filter(Boolean).join(", "),
       status: lead.status,
       usuario: usuarioLabel(lead),
-      computadores: group.computers.map((item) => ({ id: item.id, tombo: item.tombo, modelo: assetModelo(item) })),
-      monitores: group.monitors.map((item) => ({ id: item.id, tombo: item.tombo, modelo: assetModelo(item) })),
+      computadores: group.computers.map((item) => ({ id: item.id, tombo: item.tombo, modelo: assetModelo(item), serialNumber: item.serialNumber })),
+      monitores: group.monitors.map((item) => ({ id: item.id, tombo: item.tombo, modelo: assetModelo(item), serialNumber: item.serialNumber })),
     };
   });
 
@@ -78,7 +83,7 @@ export default async function VisaoGeralPage() {
     modeloComputador: assetModelo(item),
     status: item.status,
     usuario: usuarioLabel(item),
-    computadores: [{ id: item.id, tombo: item.tombo, modelo: assetModelo(item) }],
+    computadores: [{ id: item.id, tombo: item.tombo, modelo: assetModelo(item), serialNumber: item.serialNumber }],
     monitores: [],
   }));
 
@@ -93,7 +98,7 @@ export default async function VisaoGeralPage() {
     status: item.status,
     usuario: usuarioLabel(item),
     computadores: [],
-    monitores: [{ id: item.id, tombo: item.tombo, modelo: assetModelo(item) }],
+    monitores: [{ id: item.id, tombo: item.tombo, modelo: assetModelo(item), serialNumber: item.serialNumber }],
   }));
 
   const rows = [...groupedRows, ...computerRows, ...monitorRows].sort((a, b) => {
@@ -114,7 +119,7 @@ export default async function VisaoGeralPage() {
         title="Visão Geral"
         description="Uma linha por agrupamento ou equipamento. Use o filtro no cabeçalho de cada coluna, como no Excel."
       />
-      <VisaoGeralTable rows={rows} />
+      <VisaoGeralTable rows={rows} initialSetor={setor?.trim() || ""} />
     </>
   );
 }

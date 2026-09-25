@@ -3,6 +3,7 @@ import Link from "next/link";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { isAdminRole } from "@/lib/authz";
+import { canOperateRole } from "@/lib/roles";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { MovementTimeline } from "@/components/MovementTimeline";
 import { MonitorDetailActions } from "@/components/MonitorDetailActions";
@@ -63,7 +64,11 @@ export default async function MonitorDetailPage({ params }: { params: Promise<{ 
             <span>{monitor.modelo || "Modelo não informado"}</span>
           </div>
         </div>
-        <MonitorDetailActions monitorId={monitor.id} isAdmin={isAdminRole(session?.user?.role)} />
+        <MonitorDetailActions
+          monitorId={monitor.id}
+          isAdmin={isAdminRole(session?.user?.role)}
+          canOperate={canOperateRole(session?.user?.role)}
+        />
       </div>
 
       <section className="surface p-5">
@@ -108,6 +113,7 @@ export default async function MonitorDetailPage({ params }: { params: Promise<{ 
         current={{ kind: "MONITOR", id: monitor.id, tombo: monitor.tombo }}
         members={members.map(toClientGroupMember)}
         candidates={candidates}
+        canOperate={canOperateRole(session?.user?.role)}
       />
 
       <section className="surface p-5">

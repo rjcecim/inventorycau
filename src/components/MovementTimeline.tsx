@@ -2,7 +2,8 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Monitor, PcCase } from "lucide-react";
+import { ArrowRight, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Laptop, Monitor, PcCase } from "lucide-react";
+import { inventoryKindHref } from "@/lib/inventory-kind";
 import { FIELD_LABELS } from "@/lib/audit";
 import { cn, formatDateTime } from "@/lib/utils";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -20,12 +21,12 @@ type Movement = {
   actor: { fullName: string } | null;
   computador: { id: string; tombo: string } | null;
   monitor: { id: string; tombo: string } | null;
-  kind: "COMPUTER" | "MONITOR";
+  kind: "COMPUTER" | "NOTEBOOK" | "MONITOR";
 };
 
 type ChangeGroup = {
   key: string;
-  kind: "COMPUTER" | "MONITOR";
+  kind: "COMPUTER" | "NOTEBOOK" | "MONITOR";
   assetLabel: string;
   assetHref: string | null;
   actor: string | null;
@@ -50,8 +51,9 @@ function groupMovements(items: Movement[]): ChangeGroup[] {
 
   for (const item of items) {
     const timeKey = new Date(item.createdDate).toISOString().slice(0, 19);
-    const assetId = item.kind === "COMPUTER" ? item.computador?.id : item.monitor?.id;
-    const tombo = item.kind === "COMPUTER" ? item.computador?.tombo : item.monitor?.tombo;
+    const isComputerLike = item.kind === "COMPUTER" || item.kind === "NOTEBOOK";
+    const assetId = isComputerLike ? item.computador?.id : item.monitor?.id;
+    const tombo = isComputerLike ? item.computador?.tombo : item.monitor?.tombo;
     const key = `${item.kind}:${assetId ?? tombo ?? "x"}:${timeKey}:${item.actor?.fullName ?? ""}`;
 
     const existing = groups.get(key);
@@ -71,19 +73,19 @@ function groupMovements(items: Movement[]): ChangeGroup[] {
       key,
       kind: item.kind,
       assetLabel: tombo
-        ? item.kind === "COMPUTER"
-          ? `PC ${tombo}`
-          : `Monitor ${tombo}`
+        ? item.kind === "NOTEBOOK"
+          ? `Notebook ${tombo}`
+          : item.kind === "COMPUTER"
+            ? `PC ${tombo}`
+            : `Monitor ${tombo}`
         : item.campo === "lote"
           ? item.valorNovo ?? "Cadastro em lote"
-          : item.kind === "COMPUTER"
-            ? "Computadores"
-            : "Monitores",
-      assetHref: assetId
-        ? item.kind === "COMPUTER"
-          ? `/computadores/${assetId}`
-          : `/monitores/${assetId}`
-        : null,
+          : item.kind === "NOTEBOOK"
+            ? "Notebooks"
+            : item.kind === "COMPUTER"
+              ? "Computadores"
+              : "Monitores",
+      assetHref: assetId ? inventoryKindHref(item.kind, assetId) : null,
       actor: item.actor?.fullName ?? null,
       createdDate: item.createdDate,
       changes: [change],
@@ -252,7 +254,7 @@ export function MovementTimeline({ items, showAsset = false }: { items: Movement
     <div>
       <ol className="space-y-3">
         {visible.map((group) => {
-          const Icon = group.kind === "COMPUTER" ? PcCase : Monitor;
+          const Icon = group.kind === "NOTEBOOK" ? Laptop : group.kind === "COMPUTER" ? PcCase : Monitor;
           return (
             <li key={group.key} className="rounded-xl border border-line bg-slate-50/60 p-4">
               <div className="mb-3 flex flex-wrap items-center justify-between gap-2">

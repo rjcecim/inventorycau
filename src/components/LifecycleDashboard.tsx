@@ -7,6 +7,7 @@ export function GarantiasDashboardCard({
   vencida,
   incompleto,
   pc,
+  nb,
   mon,
 }: {
   vigente: number;
@@ -14,8 +15,10 @@ export function GarantiasDashboardCard({
   vencida: number;
   incompleto: number;
   pc: { vigente: number; vence90: number; vencida: number; incompleto: number };
+  nb?: { vigente: number; vence90: number; vencida: number; incompleto: number };
   mon: { vigente: number; vence90: number; vencida: number; incompleto: number };
 }) {
+  const notebooks = nb ?? { vigente: 0, vence90: 0, vencida: 0, incompleto: 0 };
   return (
     <section className="surface p-5">
       <div className="mb-4 flex items-center justify-between gap-3">
@@ -32,7 +35,7 @@ export function GarantiasDashboardCard({
           href="/relatorios/garantias?situacao=vigente"
           label="Vigentes"
           value={vigente}
-          hint={`${pc.vigente + pc.vence90} PC · ${mon.vigente + mon.vence90} mon.`}
+          hint={`${pc.vigente + pc.vence90} PC · ${notebooks.vigente + notebooks.vence90} nb · ${mon.vigente + mon.vence90} mon.`}
           tone="ok"
         />
         <DashStat
@@ -46,14 +49,14 @@ export function GarantiasDashboardCard({
           href="/relatorios/garantias?situacao=vencida"
           label="Vencidas"
           value={vencida}
-          hint={`${pc.vencida} PC · ${mon.vencida} mon.`}
+          hint={`${pc.vencida} PC · ${notebooks.vencida} nb · ${mon.vencida} mon.`}
           tone="bad"
         />
         <DashStat
           href="/relatorios/garantias?situacao=incompleto"
           label="Dados incompletos"
           value={incompleto}
-          hint={`${pc.incompleto} PC · ${mon.incompleto} mon.`}
+          hint={`${pc.incompleto} PC · ${notebooks.incompleto} nb · ${mon.incompleto} mon.`}
         />
       </div>
     </section>
@@ -67,14 +70,14 @@ export function ModernizacaoDashboardCard({ indexes }: { indexes: CategoryIndex[
         <div>
           <h2 className="text-sm font-semibold text-slate-900">Modernização</h2>
           <p className="mt-0.5 text-xs text-slate-500">
-            Índices por categoria (PC 6 anos · monitores 8 anos). Sem índice geral oficial.
+            Índices por categoria (PC e notebook 6 anos · monitores 8 anos). Sem índice geral oficial.
           </p>
         </div>
         <Link href="/relatorios/modernizacao" className="text-xs font-medium text-brand hover:underline">
           Abrir relatório
         </Link>
       </div>
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid gap-3 sm:grid-cols-3">
         {indexes.map((item) => (
           <Link
             key={item.kind}

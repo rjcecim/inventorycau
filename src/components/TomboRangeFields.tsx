@@ -22,22 +22,20 @@ export function TomboRangeFields({
           <TextInput
             name="tomboInicio"
             required
-            inputMode="numeric"
             autoComplete="off"
             value={start}
             onChange={(event) => onStartChange(event.target.value)}
-            placeholder="000001"
+            placeholder="3053-00"
           />
         </Field>
         <Field label="Patrimônio final">
           <TextInput
             name="tomboFim"
             required
-            inputMode="numeric"
             autoComplete="off"
             value={end}
             onChange={(event) => onEndChange(event.target.value)}
-            placeholder="000100"
+            placeholder="3062-00"
           />
         </Field>
       </div>

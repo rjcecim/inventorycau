@@ -1,13 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ArrowDown, ArrowUp, CornerDownLeft, Monitor, PcCase, Search } from "lucide-react";
+import { ArrowDown, ArrowUp, CornerDownLeft, Laptop, Monitor, PcCase, Search } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 
 type Result = {
   id: string;
-  type: "Computador" | "Monitor";
+  type: "Computador" | "Notebook" | "Monitor";
   title: string;
   subtitle: string;
   href: string;
@@ -139,13 +139,13 @@ export function GlobalSearch() {
                   <p className="mt-1 text-xs text-slate-500">
                     {query.trim()
                       ? "Tente outro patrimônio, serial ou nome."
-                      : "Cadastre um computador ou monitor para começar."}
+                      : "Cadastre um computador, notebook ou monitor para começar."}
                   </p>
                 </div>
               ) : (
                 <ul className="p-2">
                   {results.map((item, index) => {
-                    const Icon = item.type === "Computador" ? PcCase : Monitor;
+                    const Icon = item.type === "Notebook" ? Laptop : item.type === "Computador" ? PcCase : Monitor;
                     const selected = index === active;
                     return (
                       <li key={`${item.type}-${item.id}`}>
@@ -161,7 +161,11 @@ export function GlobalSearch() {
                           <span
                             className={cn(
                               "grid h-9 w-9 shrink-0 place-items-center rounded-lg",
-                              item.type === "Computador" ? "bg-sky-50 text-sky-700" : "bg-violet-50 text-violet-700",
+                              item.type === "Notebook"
+                                ? "bg-emerald-50 text-emerald-700"
+                                : item.type === "Computador"
+                                  ? "bg-sky-50 text-sky-700"
+                                  : "bg-violet-50 text-violet-700",
                             )}
                           >
                             <Icon size={16} />

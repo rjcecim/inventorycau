@@ -1,7 +1,7 @@
 "use server";
 
 import { z } from "zod";
-import { requireSession } from "@/lib/authz";
+import { requireOperator } from "@/lib/authz";
 import { emptyToNull } from "@/lib/utils";
 import {
   agrupar,
@@ -44,7 +44,7 @@ function parseOthers(formData: FormData): AssetRef[] {
 }
 
 export async function agruparEquipamentos(_: unknown, formData: FormData) {
-  const session = await requireSession();
+  const session = await requireOperator();
   const reference = parseRef(formData, "reference");
   const others = parseOthers(formData);
   if (!reference) return { error: "Informe o equipamento de referência." };
@@ -76,7 +76,7 @@ export async function agruparEquipamentos(_: unknown, formData: FormData) {
 }
 
 export async function desagruparEquipamento(_: unknown, formData: FormData) {
-  const session = await requireSession();
+  const session = await requireOperator();
   const asset = parseRef(formData);
   if (!asset) return { error: "Equipamento inválido." };
   try {
@@ -92,7 +92,7 @@ export async function desagruparEquipamento(_: unknown, formData: FormData) {
 }
 
 export async function desagruparTudo(_: unknown, formData: FormData) {
-  const session = await requireSession();
+  const session = await requireOperator();
   const asset = parseRef(formData);
   if (!asset) return { error: "Equipamento inválido." };
   try {

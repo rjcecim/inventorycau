@@ -13,6 +13,7 @@ import { EMPTY_FILTER, useExcelFilters } from "@/components/ui/useExcelFilters";
 import { statusLabel } from "@/lib/status";
 import { formatPredio } from "@/lib/predios";
 import { setorLabel } from "@/lib/alocacao";
+import { variantCopy, type ComputerVariant } from "@/lib/inventory-kind";
 
 type Row = {
   id: string;
@@ -27,11 +28,12 @@ type Row = {
   agrupados: number;
 };
 
-type Col = "tombo" | "modelo" | "usuario" | "setor" | "predio" | "status" | "agrupados";
+type Col = "tombo" | "modelo" | "serial" | "usuario" | "setor" | "predio" | "status" | "agrupados";
 
 function cell(row: Row, col: Col) {
   if (col === "tombo") return row.tombo || EMPTY_FILTER;
   if (col === "modelo") return row.modelo || EMPTY_FILTER;
+  if (col === "serial") return row.serialNumber || EMPTY_FILTER;
   if (col === "usuario") return row.usuario || EMPTY_FILTER;
   if (col === "setor") return setorLabel(row.departamento) || EMPTY_FILTER;
   if (col === "predio") return formatPredio(row.localizacao) || EMPTY_FILTER;
@@ -39,9 +41,10 @@ function cell(row: Row, col: Col) {
   return String(row.agrupados);
 }
 
-const COLUMNS: Array<[Col, string, "left" | "right"]> = [
+const DESKTOP_COLUMNS: Array<[Col, string, "left" | "right"]> = [
   ["tombo", "Patrimônio", "left"],
   ["modelo", "Modelo", "left"],
+  ["serial", "S/N", "left"],
   ["usuario", "Usuário", "left"],
   ["setor", "Setor", "left"],
   ["predio", "Prédio", "left"],
@@ -49,13 +52,21 @@ const COLUMNS: Array<[Col, string, "left" | "right"]> = [
   ["agrupados", "Agrupados", "right"],
 ];
 
+const NOTEBOOK_COLUMNS = DESKTOP_COLUMNS.filter(([col]) => col !== "agrupados");
+
 export function ComputerTable({
   computers,
   isAdmin,
+  canOperate = true,
+  variant = "DESKTOP",
 }: {
   computers: Row[];
   isAdmin: boolean;
+  canOperate?: boolean;
+  variant?: ComputerVariant;
 }) {
+  const copy = variantCopy(variant);
+  const columns = variant === "NOTEBOOK" ? NOTEBOOK_COLUMNS : DESKTOP_COLUMNS;
   const router = useRouter();
   const getCell = useCallback((row: Row, col: Col) => cell(row, col), []);
   const { filtered, filters, unique, apply, hasFilter, clear, setSort } = useExcelFilters(computers, getCell);
@@ -70,10 +81,10 @@ export function ComputerTable({
         ) : null}
         {isAdmin ? (
           <Link
-            href="/computadores/novo"
+            href={`${copy.basePath}/novo`}
             className="inline-flex items-center justify-center gap-2 rounded-xl bg-brand px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-brand-hover"
           >
-            <Plus size={16} /> Novo computador
+            <Plus size={16} /> Novo {copy.noun}
           </Link>
         ) : null}
       </div>
@@ -81,7 +92,7 @@ export function ComputerTable({
         <table className="min-w-full text-sm">
           <thead className="border-b border-line bg-slate-50 text-left">
             <tr>
-              {COLUMNS.map(([col, label, align]) => (
+              {columns.map(([col, label, align]) => (
                 <th key={col} className="px-3 py-2">
                   <ExcelFilter
                     label={label}
@@ -108,29 +119,32 @@ export function ComputerTable({
                 className="cursor-pointer border-b border-line last:border-0 hover:bg-slate-50"
                 onClick={(e) => {
                   if ((e.target as HTMLElement).closest("a, button")) return;
-                  router.push(`/computadores/${row.id}`);
+                  router.push(`${copy.basePath}/${row.id}`);
                 }}
               >
                 <td className="px-4 py-3 font-medium text-slate-900">{row.tombo}</td>
                 <td className="px-4 py-3 text-slate-600">{row.modelo || "—"}</td>
+                <td className="px-4 py-3 text-slate-600">{row.serialNumber || "—"}</td>
                 <td className="px-4 py-3 text-slate-600">{row.usuario || "—"}</td>
                 <td className="px-4 py-3 text-slate-600">{setorLabel(row.departamento) || "—"}</td>
                 <td className="px-4 py-3 text-slate-600">{formatPredio(row.localizacao) || "—"}</td>
                 <td className="px-4 py-3"><StatusBadge status={row.status} /></td>
-                <td className="px-4 py-3 text-slate-600">{row.agrupados}</td>
+                {variant === "NOTEBOOK" ? null : <td className="px-4 py-3 text-slate-600">{row.agrupados}</td>}
                 <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
                   <div className="inline-flex items-center gap-0.5">
+                    {canOperate ? (
                     <button
                       type="button"
                       className="inline-flex rounded-md p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-800"
                       title="Mover"
                       onClick={(e) => {
                         e.stopPropagation();
-                        router.push(`/computadores/${row.id}/mover`);
+                        router.push(`${copy.basePath}/${row.id}/mover`);
                       }}
                     >
                       <ArrowLeftRight size={14} />
                     </button>
+                    ) : null}
                     {isAdmin ? (
                       <button
                         type="button"
@@ -138,7 +152,7 @@ export function ComputerTable({
                         title="Editar"
                         onClick={(e) => {
                           e.stopPropagation();
-                          router.push(`/computadores/${row.id}/editar`);
+                          router.push(`${copy.basePath}/${row.id}/editar`);
                         }}
                       >
                         <Pencil size={14} />
@@ -150,9 +164,9 @@ export function ComputerTable({
             ))}
           </tbody>
         </table>
-        {!filtered.length ? <EmptyState title="Nenhum computador encontrado" description="Ajuste os filtros do cabeçalho ou cadastre um novo ativo." /> : null}
+        {!filtered.length ? <EmptyState title={copy.emptyTitle} description={copy.emptyDescription} /> : null}
       </div>
-      <p className="mt-3 text-xs text-slate-500">{filtered.length} de {computers.length} computadores</p>
+      <p className="mt-3 text-xs text-slate-500">{filtered.length} de {computers.length} {copy.nounPlural}</p>
     </>
   );
 }

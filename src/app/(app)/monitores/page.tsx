@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { MonitorTable } from "@/components/MonitorTable";
 import { PageHeader } from "@/components/PageHeader";
 import { isAdminRole } from "@/lib/authz";
+import { canOperateRole } from "@/lib/roles";
 import type { AssetStatus } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
@@ -47,6 +48,7 @@ export default async function MonitoresPage({
       <MonitorTable
         monitors={rows}
         isAdmin={isAdminRole(session?.user?.role)}
+        canOperate={canOperateRole(session?.user?.role)}
       />
     </>
   );

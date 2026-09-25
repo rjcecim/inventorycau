@@ -5,6 +5,7 @@ import { ModernizacaoReport } from "@/components/ModernizacaoReport";
 import { monitorAlocacao, setorLabel } from "@/lib/alocacao";
 import { isAdminRole } from "@/lib/authz";
 import { calendarToIso, toCalendarDate, toInputDate } from "@/lib/dates";
+import { computerRowKind } from "@/lib/inventory-kind";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -39,7 +40,7 @@ export default async function RelatorioModernizacaoPage({
   const rows = [
     ...computers.map((item) => ({
       id: item.id,
-      kind: "COMPUTER" as const,
+      kind: computerRowKind(item.tipo),
       tombo: item.tombo,
       fabricante: item.fabricante,
       modelo: item.modelo,
@@ -83,7 +84,7 @@ export default async function RelatorioModernizacaoPage({
     <>
       <PageHeader
         title="Relatório de modernização"
-        description="Computadores: 6 anos · Monitores: 8 anos, a partir da data de recebimento. Índices por categoria."
+        description="Computadores e notebooks: 6 anos · Monitores: 8 anos, a partir da data de recebimento. Índices por categoria."
         actions={
           <Link href="/relatorios" className="text-sm font-medium text-brand hover:underline">
             Voltar aos relatórios

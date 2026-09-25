@@ -3,7 +3,7 @@
 import { AssetKind } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { requireAdmin, requireSession } from "@/lib/authz";
+import { requireAdmin, requireOperator } from "@/lib/authz";
 import { logChanges } from "@/lib/audit";
 import { prisma } from "@/lib/prisma";
 import { emptyToNull } from "@/lib/utils";
@@ -278,7 +278,7 @@ export async function createMonitoresLote(_: unknown, formData: FormData) {
 }
 
 export async function updateAlocacaoMonitor(_: unknown, formData: FormData) {
-  const session = await requireSession();
+  const session = await requireOperator();
   const parsed = z
     .object({
       id: z.string().min(1),

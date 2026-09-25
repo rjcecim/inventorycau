@@ -7,13 +7,14 @@ import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Field, TextInput } from "@/components/ui/Field";
+import { roleLabel } from "@/lib/roles";
 
 type Account = {
   id: string;
   email: string;
   fullName: string;
   contactEmail: string | null;
-  role: "ADMIN" | "USER";
+  role: "ADMIN" | "TECH" | "USER";
   mustChangePassword: boolean;
 };
 
@@ -64,7 +65,7 @@ export function ContasManager({ accounts, currentUserId }: { accounts: Account[]
                 <td className="px-4 py-3 font-medium text-slate-900">{account.email}</td>
                 <td className="px-4 py-3 text-slate-600">{account.fullName}</td>
                 <td className="px-4 py-3 text-slate-600">{account.contactEmail || "—"}</td>
-                <td className="px-4 py-3 text-slate-600">{account.role === "ADMIN" ? "Administrador" : "Usuário"}</td>
+                <td className="px-4 py-3 text-slate-600">{roleLabel(account.role)}</td>
                 <td className="px-4 py-3 text-xs text-slate-500">
                   {account.mustChangePassword ? "Troca obrigatória" : "Ativa"}
                 </td>
@@ -128,7 +129,8 @@ export function ContasManager({ accounts, currentUserId }: { accounts: Account[]
             <TextInput name="contactEmail" type="email" required placeholder="nome@dominio.gov.br" />
           </Field>
           <Field label="Perfil">
-            <select name="role" defaultValue="USER" className="w-full rounded-xl border border-line bg-white px-3.5 py-2.5 text-sm">
+            <select name="role" defaultValue="TECH" className="w-full rounded-xl border border-line bg-white px-3.5 py-2.5 text-sm">
+              <option value="TECH">Técnico</option>
               <option value="USER">Usuário</option>
               <option value="ADMIN">Administrador</option>
             </select>
@@ -156,6 +158,7 @@ export function ContasManager({ accounts, currentUserId }: { accounts: Account[]
             </Field>
             <Field label="Perfil">
               <select name="role" defaultValue={editing.role} className="w-full rounded-xl border border-line bg-white px-3.5 py-2.5 text-sm">
+                <option value="TECH">Técnico</option>
                 <option value="USER">Usuário</option>
                 <option value="ADMIN">Administrador</option>
               </select>

@@ -5,7 +5,32 @@ Alterações pequenas, correções e ajustes mantêm a mesma versão e increment
 `X.Y.Z` muda somente quando houver mudança funcional relevante ou significativa.
 O número do Build é sequencial e não reinicia quando `X.Y.Z` avança.
 
-## 1.5.0 (Build 11)
+## 1.6.0 (Build 13)
+
+Notebooks entram no inventário, o perfil Usuário passa a ser só consulta e a Visão Geral ganha atalhos por setor.
+
+### Adicionado
+
+- Tipo `ComputerType` (`DESKTOP` | `NOTEBOOK`) no modelo `Computador`, com padrão `DESKTOP` para registros já existentes
+- `AssetKind.NOTEBOOK` para histórico, busca e relatórios distinguirem notebook de computador
+- Rotas `/notebooks`, `/notebooks/novo`, `/notebooks/[id]`, `/notebooks/[id]/editar` e `/notebooks/[id]/mover`
+- Item Notebooks no grupo Inventário do menu lateral
+- Filtro e identificação de Notebook nos relatórios de garantias, modernização, movimentações, exportação CSV e busca global
+- Perfil Técnico, com as permissões do antigo Usuário, e perfil Usuário somente consulta (sem incluir, editar, mover ou agrupar)
+- Coluna S/N nas listas de Computadores, Monitores e Notebooks, entre Modelo e Usuário
+- Ícone de olho em cada setor, abrindo a Visão Geral filtrada por aquele setor
+- Interruptor Mostrar S/N na Visão Geral, desligado por padrão, com o número de série abaixo de cada tombo
+
+### Alterado
+
+- `/computadores` lista somente desktops; `/notebooks` lista somente notebooks
+- Visão Geral continua só com desktops e monitores — notebooks não entram nos agrupamentos nem na tabela
+- Dashboard passa a ter indicador próprio de Notebooks; o índice institucional de modernização mantém 6 anos para desktop e notebook
+- Prazo de modernização do notebook é 6 anos a partir da data de recebimento; upgrade de hardware não reinicia o prazo
+- Novo setor entra na posição da escala do código, abaixo do setor pai
+- Contas que eram Usuário passam a Técnico
+
+## 1.5.0 (Build 12)
 
 Agrupamento horizontal de computadores e monitores por identificador compartilhado, sem cadastro de estação e sem o computador como pai estrutural.
 
@@ -24,6 +49,7 @@ Agrupamento horizontal de computadores e monitores por identificador compartilha
 - Monitor deixa de herdar alocação pelo vínculo `Monitor → Computador`
 - Relatórios, dashboard e listagens passam a usar o agrupamento compartilhado
 - Data/hora do histórico formatada em UTC−3 (Belém), igual no servidor e no navegador
+- Cadastro em lote deixa de exigir patrimônio só numérico com zeros à esquerda; a faixa aceita tombos como `3053-00` … `3062-00`
 
 ### Corrigido
 

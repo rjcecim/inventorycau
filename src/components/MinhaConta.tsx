@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { changeForcedPassword, deleteOwnAccount, updateOwnProfile } from "@/app/actions/contas";
+import { roleLabel } from "@/lib/roles";
 import { logout } from "@/lib/logout";
 import { Button } from "@/components/ui/Button";
 import { Field, TextInput } from "@/components/ui/Field";
@@ -31,7 +32,7 @@ export function MinhaConta({
         <h2 className="text-sm font-semibold text-slate-900">Dados da conta</h2>
         <p className="mt-1 text-sm text-slate-500">
           Login: <span className="font-medium text-slate-700">{login}</span> ·{" "}
-          {role === "ADMIN" ? "Administrador" : "Usuário"}
+          {roleLabel(role)}
         </p>
         <form action={profileAction} className="mt-4 grid gap-3">
           <Field label="Nome">

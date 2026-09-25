@@ -24,11 +24,11 @@ function duplicateError(active: Occupied[]) {
 
 export async function releaseDeletedTombos(
   tx: Prisma.TransactionClient,
-  kind: "COMPUTER" | "MONITOR",
+  kind: "COMPUTER" | "NOTEBOOK" | "MONITOR",
   tombos: string[],
 ): Promise<{ error: string } | { ok: true }> {
   const rows: Occupied[] =
-    kind === "COMPUTER"
+    kind === "COMPUTER" || kind === "NOTEBOOK"
       ? await tx.computador.findMany({
           where: { tombo: { in: tombos } },
           select: { id: true, tombo: true, serialNumber: true, deletedAt: true },
@@ -45,7 +45,7 @@ export async function releaseDeletedTombos(
 
   for (const row of rows) {
     const data = retireAssetKeys(row.id, row.tombo, row.serialNumber);
-    if (kind === "COMPUTER") {
+    if (kind === "COMPUTER" || kind === "NOTEBOOK") {
       await tx.computador.update({ where: { id: row.id }, data });
     } else {
       await tx.monitor.update({ where: { id: row.id }, data });

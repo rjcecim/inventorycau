@@ -8,11 +8,12 @@ import {
   type CalendarDate,
 } from "@/lib/dates";
 
-export type ModernizationKind = "COMPUTER" | "MONITOR";
+export type ModernizationKind = "COMPUTER" | "NOTEBOOK" | "MONITOR";
 export type ModernizationSituation = "no_prazo" | "fora_prazo" | "sem_data";
 
 export const MODERNIZATION_YEARS: Record<ModernizationKind, number> = {
   COMPUTER: 6,
+  NOTEBOOK: 6,
   MONITOR: 8,
 };
 
@@ -29,7 +30,9 @@ export type ModernizationInfo = {
 };
 
 export function categoryLabel(kind: ModernizationKind) {
-  return kind === "COMPUTER" ? "Computadores" : "Monitores";
+  if (kind === "NOTEBOOK") return "Notebooks";
+  if (kind === "MONITOR") return "Monitores";
+  return "Computadores";
 }
 
 export function modernizationSituationLabel(situation: ModernizationSituation) {
@@ -107,7 +110,7 @@ export function buildModernizationIndexes(
   asOf?: CalendarDate,
 ): CategoryIndex[] {
   const reference = asOf ?? todayCalendar();
-  return (["COMPUTER", "MONITOR"] as const).map((kind) => {
+  return (["COMPUTER", "NOTEBOOK", "MONITOR"] as const).map((kind) => {
     const scoped = rows.filter(
       (row) => row.kind === kind && isInModernizationScope({ dataRecebimento: row.dataRecebimento, asOf: reference }),
     );

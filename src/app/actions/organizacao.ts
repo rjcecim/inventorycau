@@ -4,13 +4,40 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireAdmin } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
+import { compareSetorCodigo, parentSetorCodigo } from "@/lib/setor-codigo";
 import { emptyToNull } from "@/lib/utils";
+
+async function placeSetor(
+  tx: Parameters<Parameters<typeof prisma.$transaction>[0]>[0],
+  id: string,
+  codigo: string,
+) {
+  const others = await tx.departamento.findMany({
+    where: { id: { not: id } },
+    orderBy: { sortOrder: "asc" },
+    select: { id: true, codigo: true },
+  });
+  const insertAt = others.findIndex((item) => compareSetorCodigo(item.codigo, codigo) > 0);
+  const index = insertAt === -1 ? others.length : insertAt;
+  const sequence = [
+    ...others.slice(0, index).map((item) => item.id),
+    id,
+    ...others.slice(index).map((item) => item.id),
+  ];
+  for (let sortOrder = 0; sortOrder < sequence.length; sortOrder++) {
+    await tx.departamento.update({
+      where: { id: sequence[sortOrder] },
+      data: { sortOrder },
+    });
+  }
+}
 
 function refreshSetores() {
   revalidatePath("/departamentos");
   revalidatePath("/usuarios");
   revalidatePath("/");
   revalidatePath("/computadores");
+  revalidatePath("/notebooks");
   revalidatePath("/monitores");
 }
 
@@ -30,34 +57,50 @@ export async function saveDepartamento(_: unknown, formData: FormData) {
   if (!parsed.success) return { error: parsed.error.issues[0].message };
 
   const nivel = parsed.data.codigo.split(".").length;
-  const maxOrder = await prisma.departamento.aggregate({ _max: { sortOrder: true } });
-  const nextOrder = (maxOrder._max.sortOrder ?? 0) + 1;
+  const parentCodigo = parentSetorCodigo(parsed.data.codigo);
+  const parent = parentCodigo
+    ? await prisma.departamento.findUnique({ where: { codigo: parentCodigo }, select: { id: true } })
+    : null;
+  if (parentCodigo && !parent) {
+    return { error: `Cadastre primeiro o setor ${parentCodigo}.` };
+  }
+  const parentId = parent?.id ?? null;
+  if (parsed.data.id && parentId === parsed.data.id) {
+    return { error: "Um setor não pode ser pai de si mesmo." };
+  }
 
   try {
-    if (parsed.data.id) {
-      if (parsed.data.parentId === parsed.data.id) {
-        return { error: "Um setor não pode ser pai de si mesmo." };
+    await prisma.$transaction(async (tx) => {
+      if (parsed.data.id) {
+        const current = await tx.departamento.findUnique({
+          where: { id: parsed.data.id },
+          select: { codigo: true },
+        });
+        await tx.departamento.update({
+          where: { id: parsed.data.id },
+          data: {
+            codigo: parsed.data.codigo,
+            nome: parsed.data.nome,
+            parentId,
+            nivel,
+          },
+        });
+        if (current?.codigo !== parsed.data.codigo) {
+          await placeSetor(tx, parsed.data.id, parsed.data.codigo);
+        }
+      } else {
+        const created = await tx.departamento.create({
+          data: {
+            codigo: parsed.data.codigo,
+            nome: parsed.data.nome,
+            parentId,
+            nivel,
+            sortOrder: 0,
+          },
+        });
+        await placeSetor(tx, created.id, parsed.data.codigo);
       }
-      await prisma.departamento.update({
-        where: { id: parsed.data.id },
-        data: {
-          codigo: parsed.data.codigo,
-          nome: parsed.data.nome,
-          parentId: parsed.data.parentId,
-          nivel,
-        },
-      });
-    } else {
-      await prisma.departamento.create({
-        data: {
-          codigo: parsed.data.codigo,
-          nome: parsed.data.nome,
-          parentId: parsed.data.parentId,
-          nivel,
-          sortOrder: nextOrder,
-        },
-      });
-    }
+    });
     refreshSetores();
     return { success: true };
   } catch {
@@ -114,6 +157,7 @@ export async function saveLocalizacao(_: unknown, formData: FormData) {
     revalidatePath("/localizacoes");
     revalidatePath("/");
     revalidatePath("/computadores");
+    revalidatePath("/notebooks");
     revalidatePath("/monitores");
     return { success: true };
   } catch {
@@ -132,6 +176,7 @@ export async function deleteLocalizacao(id: string) {
   revalidatePath("/localizacoes");
   revalidatePath("/");
   revalidatePath("/computadores");
+  revalidatePath("/notebooks");
   revalidatePath("/monitores");
   return { success: true };
 }

@@ -36,13 +36,13 @@ export async function createAccount(_: unknown, formData: FormData) {
       login: loginSchema,
       fullName: nameSchema,
       contactEmail: emailSchema,
-      role: z.enum(["ADMIN", "USER"]),
+      role: z.enum(["ADMIN", "TECH", "USER"]),
     })
     .safeParse({
       login: String(formData.get("login") ?? "").trim().toLowerCase(),
       fullName: String(formData.get("fullName") ?? "").trim(),
       contactEmail: String(formData.get("contactEmail") ?? "").trim().toLowerCase(),
-      role: formData.get("role") || "USER",
+      role: formData.get("role") || "TECH",
     });
   if (!parsed.success) return { error: parsed.error.issues[0].message };
 
@@ -78,13 +78,13 @@ export async function updateAccount(_: unknown, formData: FormData) {
       id: z.string().min(1),
       fullName: nameSchema,
       contactEmail: emailSchema,
-      role: z.enum(["ADMIN", "USER"]),
+      role: z.enum(["ADMIN", "TECH", "USER"]),
     })
     .safeParse({
       id: String(formData.get("id") ?? ""),
       fullName: String(formData.get("fullName") ?? "").trim(),
       contactEmail: String(formData.get("contactEmail") ?? "").trim().toLowerCase(),
-      role: formData.get("role") || "USER",
+      role: formData.get("role") || "TECH",
     });
   if (!parsed.success) return { error: parsed.error.issues[0].message };
 

@@ -10,6 +10,7 @@ import {
   isInModernizationScope,
 } from "@/lib/modernizacao";
 import { monitorAlocacao, setorLabel } from "@/lib/alocacao";
+import { computerRowKind } from "@/lib/inventory-kind";
 import { prisma } from "@/lib/prisma";
 import { emptyToNull } from "@/lib/utils";
 
@@ -57,7 +58,7 @@ export async function saveApuracaoModernizacao(_: unknown, formData: FormData) {
   const liveRows = [
     ...computers.map((item) => ({
       id: item.id,
-      kind: "COMPUTER" as const,
+      kind: computerRowKind(item.tipo),
       tombo: item.tombo,
       fabricante: item.fabricante,
       modelo: item.modelo,
@@ -113,7 +114,7 @@ export async function saveApuracaoModernizacao(_: unknown, formData: FormData) {
     data: {
       ano: parsed.data.ano,
       dataReferencia: calendarToDbDate(asOf),
-      escopo: "computadores_e_monitores",
+      escopo: "computadores_notebooks_e_monitores",
       resultado: indexes,
       equipamentos,
       observacao: parsed.data.observacao,

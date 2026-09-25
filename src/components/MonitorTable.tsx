@@ -36,12 +36,13 @@ type Row = {
   } | null;
 };
 
-type Col = "tombo" | "modelo" | "computador" | "usuario" | "setor" | "predio" | "status";
+type Col = "tombo" | "modelo" | "serial" | "computador" | "usuario" | "setor" | "predio" | "status";
 
 function cell(row: Row, col: Col) {
   const alocacao = monitorAlocacao(row);
   if (col === "tombo") return row.tombo || EMPTY_FILTER;
   if (col === "modelo") return row.modelo || EMPTY_FILTER;
+  if (col === "serial") return row.serialNumber || EMPTY_FILTER;
   if (col === "computador") return row.computador?.tombo || EMPTY_FILTER;
   if (col === "usuario") return alocacao.usuario || EMPTY_FILTER;
   if (col === "setor") return setorLabel(alocacao.departamento) || EMPTY_FILTER;
@@ -52,6 +53,7 @@ function cell(row: Row, col: Col) {
 const COLUMNS: Array<[Col, string, "left" | "right"]> = [
   ["tombo", "Patrimônio", "left"],
   ["modelo", "Modelo", "left"],
+  ["serial", "S/N", "left"],
   ["computador", "Computador", "left"],
   ["usuario", "Usuário", "left"],
   ["setor", "Setor", "left"],
@@ -62,9 +64,11 @@ const COLUMNS: Array<[Col, string, "left" | "right"]> = [
 export function MonitorTable({
   monitors,
   isAdmin,
+  canOperate = true,
 }: {
   monitors: Row[];
   isAdmin: boolean;
+  canOperate?: boolean;
 }) {
   const router = useRouter();
   const getCell = useCallback((row: Row, col: Col) => cell(row, col), []);
@@ -125,6 +129,7 @@ export function MonitorTable({
                 >
                   <td className="px-4 py-3 font-medium text-slate-900">{row.tombo}</td>
                   <td className="px-4 py-3 text-slate-600">{row.modelo || "—"}</td>
+                  <td className="px-4 py-3 text-slate-600">{row.serialNumber || "—"}</td>
                   <td className="px-4 py-3 text-slate-600">
                     {row.computador ? (
                       <Link
@@ -144,6 +149,7 @@ export function MonitorTable({
                   <td className="px-4 py-3"><StatusBadge status={alocacao.status} /></td>
                   <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
                     <div className="inline-flex items-center gap-0.5">
+                      {canOperate ? (
                       <button
                         type="button"
                         className="inline-flex rounded-md p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-800"
@@ -155,6 +161,7 @@ export function MonitorTable({
                       >
                         <ArrowLeftRight size={14} />
                       </button>
+                      ) : null}
                       {isAdmin ? (
                         <button
                           type="button"

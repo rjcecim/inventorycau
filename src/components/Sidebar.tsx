@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { roleLabel } from "@/lib/roles";
 import { usePathname } from "next/navigation";
 import { useSyncExternalStore } from "react";
 import {
@@ -8,6 +9,7 @@ import {
   Table2,
   Monitor,
   PcCase,
+  Laptop,
   Building2,
   MapPin,
   ArrowLeftRight,
@@ -59,6 +61,7 @@ const groups = [
     items: [
       { href: "/computadores", icon: PcCase, label: "Computadores" },
       { href: "/monitores", icon: Monitor, label: "Monitores" },
+      { href: "/notebooks", icon: Laptop, label: "Notebooks" },
     ],
   },
   {
@@ -180,7 +183,7 @@ export function Sidebar({ userName, userRole }: { userName?: string | null; user
         ) : (
           <Link href="/conta" className="min-w-0 flex-1 rounded-lg px-1 py-0.5 hover:bg-white/5">
             <p className="truncate text-sm font-medium text-white">{userName}</p>
-            <p className="text-xs text-slate-500">{userRole === "ADMIN" ? "Administrador" : "Usuário"}</p>
+            <p className="text-xs text-slate-500">{roleLabel(userRole)}</p>
           </Link>
         )}
         <button

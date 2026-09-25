@@ -2,6 +2,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { GarantiasReport } from "@/components/GarantiasReport";
 import { monitorAlocacao, setorLabel } from "@/lib/alocacao";
 import { toInputDate } from "@/lib/dates";
+import { computerRowKind } from "@/lib/inventory-kind";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 
@@ -31,7 +32,7 @@ export default async function RelatorioGarantiasPage({
   const rows = [
     ...computers.map((item) => ({
       id: item.id,
-      kind: "COMPUTER" as const,
+      kind: computerRowKind(item.tipo),
       tombo: item.tombo,
       fabricante: item.fabricante,
       modelo: item.modelo,

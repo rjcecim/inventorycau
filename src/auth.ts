@@ -46,19 +46,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.role = (user as { role?: string }).role;
         token.mustChangePassword = Boolean((user as { mustChangePassword?: boolean }).mustChangePassword);
       }
-      if (trigger === "update") {
-        if (session && typeof (session as { mustChangePassword?: unknown }).mustChangePassword === "boolean") {
-          token.mustChangePassword = Boolean((session as { mustChangePassword: boolean }).mustChangePassword);
-        }
-        if (token.id) {
-          const fresh = await prisma.user.findUnique({
-            where: { id: String(token.id) },
-            select: { mustChangePassword: true, role: true },
-          });
-          if (fresh) {
-            token.mustChangePassword = fresh.mustChangePassword;
-            token.role = fresh.role;
-          }
+      if (trigger === "update" && session && typeof (session as { mustChangePassword?: unknown }).mustChangePassword === "boolean") {
+        token.mustChangePassword = Boolean((session as { mustChangePassword: boolean }).mustChangePassword);
+      }
+      if (token.id) {
+        const fresh = await prisma.user.findUnique({
+          where: { id: String(token.id) },
+          select: { mustChangePassword: true, role: true },
+        });
+        if (fresh) {
+          token.mustChangePassword = fresh.mustChangePassword;
+          token.role = fresh.role;
         }
       }
       return token;

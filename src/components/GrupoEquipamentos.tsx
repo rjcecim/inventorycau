@@ -23,10 +23,12 @@ export function GrupoEquipamentos({
   current,
   members,
   candidates,
+  canOperate = true,
 }: {
   current: AssetRef & { tombo: string };
   members: Array<Omit<GroupMember, "deletedAt">>;
   candidates: Candidate[];
+  canOperate?: boolean;
 }) {
   const router = useRouter();
   const grouped = members.length >= 2;
@@ -108,7 +110,7 @@ export function GrupoEquipamentos({
     <section id="agrupamento" className="surface p-5">
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <h2 className="text-sm font-semibold">Equipamentos agrupados</h2>
-        <div className="flex flex-wrap gap-2">
+        {canOperate ? <div className="flex flex-wrap gap-2">
           <Button type="button" variant="secondary" onClick={() => { setError(""); setAgruparOpen(true); }}>
             {grouped ? "Adicionar ao grupo" : "Agrupar equipamentos"}
           </Button>
@@ -122,7 +124,7 @@ export function GrupoEquipamentos({
               </Button>
             </>
           ) : null}
-        </div>
+        </div> : null}
       </div>
 
       {grouped ? (

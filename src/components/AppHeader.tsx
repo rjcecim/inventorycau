@@ -12,7 +12,9 @@ function showAssetSearch(pathname: string) {
     pathname === "/computadores" ||
     pathname.startsWith("/computadores/") ||
     pathname === "/monitores" ||
-    pathname.startsWith("/monitores/")
+    pathname.startsWith("/monitores/") ||
+    pathname === "/notebooks" ||
+    pathname.startsWith("/notebooks/")
   );
 }
 

@@ -1,12 +1,14 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import Link from "next/link";
+import { Eye, Pencil, Plus, Trash2 } from "lucide-react";
 import { saveDepartamento, deleteDepartamento } from "@/app/actions/organizacao";
+import { setorLabel } from "@/lib/alocacao";
+import { parentSetorCodigo } from "@/lib/setor-codigo";
 import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
 import { Field, TextInput } from "@/components/ui/Field";
-import { SearchSelect } from "@/components/ui/SearchSelect";
 import { EmptyState } from "@/components/ui/EmptyState";
 
 type Item = {
@@ -46,7 +48,7 @@ export function SetoresManager({
           <span>Lotação</span>
           <span className="text-right">Computadores</span>
           <span className="text-right">Monitores</span>
-          <span className="w-24 text-right">{isAdmin ? "Ações" : ""}</span>
+          <span className="w-28 text-right">Ações</span>
         </div>
         {items.length ? (
           <ul className="divide-y divide-slate-100">
@@ -64,7 +66,14 @@ export function SetoresManager({
                 </div>
                 <span className="text-right tabular-nums text-slate-600">{item.computadores}</span>
                 <span className="text-right tabular-nums text-slate-600">{item.monitores}</span>
-                <div className="flex w-24 justify-end gap-1">
+                <div className="flex w-28 justify-end gap-1">
+                  <Link
+                    href={`/visao-geral?setor=${encodeURIComponent(setorLabel(item))}`}
+                    className="rounded-md p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-800"
+                    title="Ver na visão geral"
+                  >
+                    <Eye size={14} />
+                  </Link>
                   {isAdmin ? (
                     <>
                       <button
@@ -133,6 +142,9 @@ function SetorForm({
   parents: Item[];
   onSuccess: () => void;
 }) {
+  const [codigo, setCodigo] = useState(item?.codigo ?? "");
+  const parentCodigo = parentSetorCodigo(codigo);
+  const parent = parentCodigo ? parents.find((setor) => setor.codigo === parentCodigo) : null;
   const [state, formAction, pending] = useActionState(async (prev: unknown, fd: FormData) => {
     const res = await saveDepartamento(prev, fd);
     if (res.success) onSuccess();
@@ -142,24 +154,26 @@ function SetorForm({
   return (
     <form action={formAction} className="grid gap-4">
       {item ? <input type="hidden" name="id" value={item.id} /> : null}
-      <Field label="Código" hint="ex.: 9.2.5">
-        <TextInput name="codigo" required defaultValue={item?.codigo} placeholder="9.2.5" />
+      <input type="hidden" name="parentId" value={parent?.id ?? ""} />
+      <Field label="Código" hint="a escala define o lugar">
+        <TextInput
+          name="codigo"
+          required
+          value={codigo}
+          placeholder="9.2.5"
+          onChange={(event) => setCodigo(event.target.value)}
+        />
       </Field>
       <Field label="Nome">
         <TextInput name="nome" required defaultValue={item?.nome} />
       </Field>
-      <Field label="Setor pai" hint="opcional">
-        <SearchSelect
-          name="parentId"
-          defaultValue={item?.parentId ?? ""}
-          emptyLabel="Nenhum (nível raiz)"
-          placeholder="Pesquisar setor pai…"
-          options={parents.map((p) => ({
-            id: p.id,
-            label: `${p.codigo}. ${p.nome}`,
-          }))}
-        />
-      </Field>
+      <p className="text-sm text-slate-500">
+        {parent
+          ? `Entra abaixo de ${parent.codigo}. ${parent.nome}.`
+          : parentCodigo
+            ? `Cadastre primeiro o setor ${parentCodigo}.`
+            : "Código sem ponto entra no nível raiz, na ordem da escala."}
+      </p>
       {state && "error" in state && state.error ? (
         <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">{state.error}</p>
       ) : null}

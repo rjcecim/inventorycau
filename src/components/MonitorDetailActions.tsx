@@ -10,9 +10,11 @@ import { deleteMonitor } from "@/app/actions/monitores";
 export function MonitorDetailActions({
   monitorId,
   isAdmin,
+  canOperate = true,
 }: {
   monitorId: string;
   isAdmin: boolean;
+  canOperate?: boolean;
 }) {
   const [remove, setRemove] = useState(false);
   const [error, setError] = useState("");
@@ -20,12 +22,14 @@ export function MonitorDetailActions({
 
   return (
     <div className="flex flex-wrap gap-2">
+      {canOperate ? (
       <Link
         href={`/monitores/${monitorId}/mover`}
         className="inline-flex items-center justify-center rounded-xl bg-brand px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-brand-hover"
       >
         Mover
       </Link>
+      ) : null}
       {isAdmin ? (
         <>
           <Link

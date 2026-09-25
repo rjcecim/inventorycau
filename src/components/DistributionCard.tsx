@@ -68,9 +68,9 @@ export function StatusSplitCard({
   statuses,
 }: {
   title: string;
-  statuses: { label: string; computers: number; monitors: number }[];
+  statuses: { label: string; computers: number; notebooks?: number; monitors: number }[];
 }) {
-  const rows = statuses.filter((row) => row.computers > 0 || row.monitors > 0);
+  const rows = statuses.filter((row) => row.computers > 0 || (row.notebooks ?? 0) > 0 || row.monitors > 0);
   if (!rows.length) {
     return (
       <section className="surface p-5">
@@ -83,16 +83,18 @@ export function StatusSplitCard({
   return (
     <section className="surface p-5">
       <h2 className="mb-4 text-sm font-semibold text-slate-900">{title}</h2>
-      <div className="mb-2 grid grid-cols-[1fr_3.5rem_3.5rem] gap-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+      <div className="mb-2 grid grid-cols-[1fr_3.5rem_3.5rem_3.5rem] gap-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
         <span>Status</span>
         <span className="text-right">PC</span>
+        <span className="text-right">Nb.</span>
         <span className="text-right">Mon.</span>
       </div>
       <ul className="divide-y divide-line">
         {rows.map((row) => (
-          <li key={row.label} className="grid grid-cols-[1fr_3.5rem_3.5rem] gap-2 py-2 text-sm">
+          <li key={row.label} className="grid grid-cols-[1fr_3.5rem_3.5rem_3.5rem] gap-2 py-2 text-sm">
             <span className="truncate text-slate-700">{row.label}</span>
             <span className="text-right tabular-nums font-medium text-slate-900">{row.computers}</span>
+            <span className="text-right tabular-nums font-medium text-slate-900">{row.notebooks ?? 0}</span>
             <span className="text-right tabular-nums font-medium text-slate-900">{row.monitors}</span>
           </li>
         ))}

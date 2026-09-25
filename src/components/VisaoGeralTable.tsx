@@ -8,8 +8,9 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 import { ExcelFilter } from "@/components/ui/ExcelFilter";
 import { Button } from "@/components/ui/Button";
 import { statusLabel } from "@/lib/status";
+import { cn } from "@/lib/utils";
 
-type AssetRef = { id: string; tombo: string; modelo: string };
+type AssetRef = { id: string; tombo: string; modelo: string; serialNumber?: string | null };
 
 type Row = {
   id: string;
@@ -97,9 +98,35 @@ function PatrimonioLink({ href, label, modelo }: { href: string; label: string; 
   );
 }
 
-export function VisaoGeralTable({ rows }: { rows: Row[] }) {
+function TomboItem({
+  href,
+  tombo,
+  modelo,
+  serialNumber,
+  showSerial,
+}: {
+  href: string;
+  tombo: string;
+  modelo: string;
+  serialNumber?: string | null;
+  showSerial: boolean;
+}) {
+  return (
+    <span className="inline-flex flex-col">
+      <PatrimonioLink href={href} label={tombo} modelo={modelo} />
+      {showSerial ? (
+        <span className="text-[11px] font-normal leading-tight text-slate-400">{serialNumber || "—"}</span>
+      ) : null}
+    </span>
+  );
+}
+
+export function VisaoGeralTable({ rows, initialSetor = "" }: { rows: Row[]; initialSetor?: string }) {
+  const [showSerial, setShowSerial] = useState(false);
   const [sort, setSort] = useState<{ col: Col; dir: "asc" | "desc" } | null>(null);
-  const [filters, setFilters] = useState<Partial<Record<Col, string[]>>>({});
+  const [filters, setFilters] = useState<Partial<Record<Col, string[]>>>(() =>
+    initialSetor ? { setor: [initialSetor] } : {},
+  );
 
   const filtered = useMemo(() => {
     let next = rows.filter((row) =>
@@ -131,8 +158,30 @@ export function VisaoGeralTable({ rows }: { rows: Row[] }) {
 
   return (
     <>
-      {hasFilter ? (
-        <div className="mb-3 flex justify-end">
+      <div className="mb-3 flex items-center justify-end gap-3">
+        <button
+          type="button"
+          role="switch"
+          aria-checked={showSerial}
+          onClick={() => setShowSerial((current) => !current)}
+          className="inline-flex items-center gap-2 text-sm text-slate-600"
+        >
+          <span
+            className={cn(
+              "relative h-5 w-9 rounded-full transition",
+              showSerial ? "bg-brand" : "bg-slate-300",
+            )}
+          >
+            <span
+              className={cn(
+                "absolute top-0.5 h-4 w-4 rounded-full bg-white transition",
+                showSerial ? "left-4" : "left-0.5",
+              )}
+            />
+          </span>
+          Mostrar S/N
+        </button>
+        {hasFilter ? (
           <Button
             type="button"
             variant="ghost"
@@ -140,8 +189,8 @@ export function VisaoGeralTable({ rows }: { rows: Row[] }) {
           >
             Limpar filtros
           </Button>
-        </div>
-      ) : null}
+        ) : null}
+      </div>
       <div className="surface overflow-x-auto">
         <table className="min-w-full text-sm">
           <thead className="border-b border-line bg-slate-50 text-left">
@@ -185,8 +234,14 @@ export function VisaoGeralTable({ rows }: { rows: Row[] }) {
                       <span className="flex flex-wrap gap-x-2">
                         {(row.computadores ?? []).map((item, index) => (
                           <span key={item.id}>
-                            <PatrimonioLink href={`/computadores/${item.id}`} label={item.tombo} modelo={item.modelo} />
-                            {index < (row.computadores?.length ?? 0) - 1 ? "," : ""}
+                            <TomboItem
+                              href={`/computadores/${item.id}`}
+                              tombo={item.tombo}
+                              modelo={item.modelo}
+                              serialNumber={item.serialNumber}
+                              showSerial={showSerial}
+                            />
+                            {!showSerial && index < (row.computadores?.length ?? 0) - 1 ? "," : ""}
                           </span>
                         ))}
                       </span>
@@ -202,8 +257,14 @@ export function VisaoGeralTable({ rows }: { rows: Row[] }) {
                       <span className="flex flex-wrap gap-x-2">
                         {shown.map((monitor, index) => (
                           <span key={monitor.id}>
-                            <PatrimonioLink href={`/monitores/${monitor.id}`} label={monitor.tombo} modelo={monitor.modelo} />
-                            {index < shown.length - 1 ? "," : ""}
+                            <TomboItem
+                              href={`/monitores/${monitor.id}`}
+                              tombo={monitor.tombo}
+                              modelo={monitor.modelo}
+                              serialNumber={monitor.serialNumber}
+                              showSerial={showSerial}
+                            />
+                            {!showSerial && index < shown.length - 1 ? "," : ""}
                           </span>
                         ))}
                       </span>

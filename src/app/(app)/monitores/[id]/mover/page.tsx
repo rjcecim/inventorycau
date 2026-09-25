@@ -6,12 +6,14 @@ import { loadMonitorFormOptions } from "@/lib/asset-form";
 import { PageHeader } from "@/components/PageHeader";
 import { MonitorMover } from "@/components/MonitorMover";
 import { listGroupMembers } from "@/lib/equipamento-grupo";
+import { canOperateRole } from "@/lib/roles";
 
 export const dynamic = "force-dynamic";
 
 export default async function MoverMonitorPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
+  if (!canOperateRole(session.user.role)) redirect("/monitores");
   const { id } = await params;
   const [monitor, options, members] = await Promise.all([
     prisma.monitor.findFirst({ where: { id, deletedAt: null } }),

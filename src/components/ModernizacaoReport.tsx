@@ -22,10 +22,11 @@ import {
   type ModernizationSituation,
 } from "@/lib/modernizacao";
 import { saveApuracaoModernizacao } from "@/app/actions/modernizacao";
+import { inventoryKindHref, inventoryKindLabel } from "@/lib/inventory-kind";
 
 export type ModernizacaoRow = {
   id: string;
-  kind: "COMPUTER" | "MONITOR";
+  kind: "COMPUTER" | "NOTEBOOK" | "MONITOR";
   tombo: string;
   fabricante: string | null;
   modelo: string | null;
@@ -78,7 +79,7 @@ function matchesSituation(situation: ModernizationSituation, filter: string) {
 
 function cell(row: Enriched, col: Col) {
   if (col === "tombo") return row.tombo || EMPTY_FILTER;
-  if (col === "tipo") return row.kind === "COMPUTER" ? "Computador" : "Monitor";
+  if (col === "tipo") return inventoryKindLabel(row.kind);
   if (col === "modelo") return row.modelo || EMPTY_FILTER;
   if (col === "setor") return row.setorLabel || EMPTY_FILTER;
   if (col === "recebimento") return formatCalendarDate(row.mod.receivedAt);
@@ -103,7 +104,9 @@ export function ModernizacaoReport({
 }) {
   const router = useRouter();
   const todayIso = calendarToIso(todayCalendar());
-  const [tipo, setTipo] = useState(initialTipo === "COMPUTER" || initialTipo === "MONITOR" ? initialTipo : "todos");
+  const [tipo, setTipo] = useState(
+    initialTipo === "COMPUTER" || initialTipo === "NOTEBOOK" || initialTipo === "MONITOR" ? initialTipo : "todos",
+  );
   const [situacao, setSituacao] = useState("todas");
   const [setor, setSetor] = useState("todos");
   const [refDate, setRefDate] = useState(todayIso);
@@ -173,6 +176,7 @@ export function ModernizacaoReport({
           >
             <option value="todos">Todos</option>
             <option value="COMPUTER">Computador</option>
+            <option value="NOTEBOOK">Notebook</option>
             <option value="MONITOR">Monitor</option>
           </select>
         </Field>
@@ -223,7 +227,7 @@ export function ModernizacaoReport({
                 ],
                 filtered.map((row) => [
                   row.tombo,
-                  row.kind === "COMPUTER" ? "Computador" : "Monitor",
+                  inventoryKindLabel(row.kind),
                   row.modelo || "",
                   row.setorLabel,
                   formatCalendarDate(row.mod.receivedAt),
@@ -298,12 +302,12 @@ export function ModernizacaoReport({
                 <td className="px-4 py-3 font-medium">
                   <Link
                     className="text-brand hover:underline"
-                    href={row.kind === "COMPUTER" ? `/computadores/${row.id}` : `/monitores/${row.id}`}
+                    href={inventoryKindHref(row.kind, row.id)}
                   >
                     {row.tombo}
                   </Link>
                 </td>
-                <td className="px-4 py-3 text-slate-600">{row.kind === "COMPUTER" ? "Computador" : "Monitor"}</td>
+                <td className="px-4 py-3 text-slate-600">{inventoryKindLabel(row.kind)}</td>
                 <td className="px-4 py-3 text-slate-600">
                   {row.modelo || "—"}
                 </td>

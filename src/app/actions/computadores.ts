@@ -1,9 +1,9 @@
 "use server";
 
-import { AssetKind } from "@prisma/client";
+import { ComputerType } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { requireAdmin, requireSession } from "@/lib/authz";
+import { requireAdmin, requireOperator } from "@/lib/authz";
 import { logChanges } from "@/lib/audit";
 import { prisma } from "@/lib/prisma";
 import { emptyToNull } from "@/lib/utils";
@@ -13,6 +13,7 @@ import { formatTomboRangeLabel, parseTomboRange } from "@/lib/tombo-range";
 import { releaseDeletedTombos, retireAssetKeys } from "@/lib/tombo-reuse";
 import { detachOnDelete, GROUP_TX, prismaGroupStore, revalidateGroupMembers, syncAllocationFromOriginator } from "@/lib/equipamento-grupo";
 import { statusLabel } from "@/lib/status";
+import { variantAssetKind, variantCopy, type ComputerVariant } from "@/lib/inventory-kind";
 
 const statusEnum = z.enum([
   "IN_USE",
@@ -58,16 +59,23 @@ function fromForm(formData: FormData) {
   });
 }
 
-function refresh() {
+function parseTipo(formData: FormData): ComputerType {
+  return formData.get("tipo") === "NOTEBOOK" ? ComputerType.NOTEBOOK : ComputerType.DESKTOP;
+}
+
+function refresh(variant: ComputerVariant = "DESKTOP") {
+  const copy = variantCopy(variant);
   revalidatePath("/");
+  revalidatePath(copy.basePath);
   revalidatePath("/computadores");
+  revalidatePath("/notebooks");
   revalidatePath("/monitores");
   revalidatePath("/movimentacoes");
   revalidatePath("/relatorios");
   revalidatePath("/relatorios/garantias");
   revalidatePath("/relatorios/modernizacao");
   revalidatePath("/departamentos");
-  revalidatePath("/visao-geral");
+  if (variant === "DESKTOP") revalidatePath("/visao-geral");
 }
 
 export async function saveComputador(_: unknown, formData: FormData) {
@@ -81,6 +89,7 @@ export async function saveComputador(_: unknown, formData: FormData) {
 
   const data = parsed.data;
   const acq = acquisition.data;
+  const createTipo = parseTipo(formData);
   try {
     const servidor = data.servidorId
       ? await prisma.servidor.findUnique({ where: { id: data.servidorId } })
@@ -94,7 +103,9 @@ export async function saveComputador(_: unknown, formData: FormData) {
         where: { id: data.id },
         include: { departamento: true, localizacao: true },
       });
-      if (!current) return { error: "Computador não encontrado." };
+      if (!current) return { error: "Equipamento não encontrado." };
+      const tipo = current.tipo;
+      const assetKind = variantAssetKind(tipo);
 
       const nextDept = departamentoId
         ? await prisma.departamento.findUnique({ where: { id: departamentoId } })
@@ -133,7 +144,7 @@ export async function saveComputador(_: unknown, formData: FormData) {
         ];
         await logChanges({
           tx,
-          kind: AssetKind.COMPUTER,
+          kind: assetKind,
           computadorId: current.id,
           actorId: session.user.id,
           changes: [
@@ -141,6 +152,7 @@ export async function saveComputador(_: unknown, formData: FormData) {
             { campo: "tombo", anterior: current.tombo, novo: data.tombo },
           ],
         });
+        if (tipo === "NOTEBOOK") return [];
         return syncAllocationFromOriginator(tx, {
           originator: { kind: "COMPUTER", id: current.id },
           previous: {
@@ -160,14 +172,18 @@ export async function saveComputador(_: unknown, formData: FormData) {
         });
       }, GROUP_TX);
       await revalidateGroupMembers(linked);
+      refresh(tipo);
+      return { success: true, id: savedId };
     } else {
+      const assetKind = variantAssetKind(createTipo);
       const created = await prisma.$transaction(async (tx) => {
-        const released = await releaseDeletedTombos(tx, AssetKind.COMPUTER, [data.tombo]);
+        const released = await releaseDeletedTombos(tx, assetKind, [data.tombo]);
         if ("error" in released) throw new Error(released.error);
         const row = await tx.computador.create({
           data: {
             tombo: data.tombo,
             serialNumber: data.serialNumber,
+            tipo: createTipo,
             fabricante: data.fabricante,
             modelo: data.modelo,
             status: data.status,
@@ -186,7 +202,7 @@ export async function saveComputador(_: unknown, formData: FormData) {
         });
         await logChanges({
           tx,
-          kind: AssetKind.COMPUTER,
+          kind: assetKind,
           computadorId: row.id,
           actorId: session.user.id,
           changes: [{ campo: "created", novo: row.tombo }],
@@ -194,9 +210,9 @@ export async function saveComputador(_: unknown, formData: FormData) {
         return row;
       });
       savedId = created.id;
+      refresh(createTipo);
+      return { success: true, id: savedId };
     }
-    refresh();
-    return { success: true, id: savedId };
   } catch {
     return { error: "Não foi possível salvar. Verifique patrimônio e serial duplicados." };
   }
@@ -231,6 +247,8 @@ export async function createComputadoresLote(_: unknown, formData: FormData) {
 
   const data = parsed.data;
   const acq = acquisition.data;
+  const createTipo = parseTipo(formData);
+  const assetKind = variantAssetKind(createTipo);
   const { tombos, start, end, count } = range.ok;
 
   try {
@@ -245,12 +263,13 @@ export async function createComputadoresLote(_: unknown, formData: FormData) {
 
     const usuario = servidor?.nome ?? null;
     const result = await prisma.$transaction(async (tx) => {
-      const released = await releaseDeletedTombos(tx, AssetKind.COMPUTER, tombos);
+      const released = await releaseDeletedTombos(tx, assetKind, tombos);
       if ("error" in released) return released;
       await tx.computador.createMany({
         data: tombos.map((tombo) => ({
           tombo,
           serialNumber: null,
+          tipo: createTipo,
           fabricante: data.fabricante,
           modelo: data.modelo,
           status: data.status,
@@ -269,14 +288,14 @@ export async function createComputadoresLote(_: unknown, formData: FormData) {
       });
       await logChanges({
         tx,
-        kind: AssetKind.COMPUTER,
+        kind: assetKind,
         actorId: session.user.id,
         changes: [{ campo: "lote", novo: formatTomboRangeLabel({ start, end, count }) }],
       });
       return { ok: true as const };
     });
     if ("error" in result) return result;
-    refresh();
+    refresh(createTipo);
     return { success: true, count };
   } catch {
     return { error: "Não foi possível criar o lote. Verifique patrimônios duplicados." };
@@ -284,7 +303,7 @@ export async function createComputadoresLote(_: unknown, formData: FormData) {
 }
 
 export async function updateAlocacaoComputador(_: unknown, formData: FormData) {
-  const session = await requireSession();
+  const session = await requireOperator();
   const parsed = z
     .object({
       id: z.string().min(1),
@@ -308,7 +327,9 @@ export async function updateAlocacaoComputador(_: unknown, formData: FormData) {
       where: { id: data.id, deletedAt: null },
       include: { departamento: true, localizacao: true },
     });
-    if (!current) return { error: "Computador não encontrado." };
+    if (!current) return { error: "Equipamento não encontrado." };
+    const tipo = current.tipo;
+    const assetKind = variantAssetKind(tipo);
 
     const servidor = data.servidorId
       ? await prisma.servidor.findUnique({ where: { id: data.servidorId } })
@@ -341,11 +362,12 @@ export async function updateAlocacaoComputador(_: unknown, formData: FormData) {
       });
       await logChanges({
         tx,
-        kind: AssetKind.COMPUTER,
+        kind: assetKind,
         computadorId: data.id,
         actorId: session.user.id,
         changes: allocationChanges,
       });
+      if (tipo === "NOTEBOOK") return [];
       return syncAllocationFromOriginator(tx, {
         originator: { kind: "COMPUTER", id: data.id },
         previous: {
@@ -365,8 +387,8 @@ export async function updateAlocacaoComputador(_: unknown, formData: FormData) {
       });
     }, GROUP_TX);
 
-    refresh();
-    revalidatePath(`/computadores/${data.id}`);
+    refresh(tipo);
+    revalidatePath(`${variantCopy(tipo).basePath}/${data.id}`);
     await revalidateGroupMembers(linked);
     return { success: true, id: data.id };
   } catch {
@@ -377,23 +399,26 @@ export async function updateAlocacaoComputador(_: unknown, formData: FormData) {
 export async function deleteComputador(id: string) {
   const session = await requireAdmin();
   const current = await prisma.computador.findUnique({ where: { id } });
-  if (!current) return { error: "Computador não encontrado." };
+  if (!current) return { error: "Equipamento não encontrado." };
+  const tipo = current.tipo;
   if (current.status === "IN_USE") {
     return { error: "Desaloque ou altere o status antes de excluir um equipamento em uso." };
   }
   await prisma.$transaction(async (tx) => {
-    await detachOnDelete(prismaGroupStore(tx), { kind: "COMPUTER", id }, session.user.id);
+    if (tipo === "DESKTOP") {
+      await detachOnDelete(prismaGroupStore(tx), { kind: "COMPUTER", id }, session.user.id);
+    }
     await tx.computador.update({
       where: { id },
       data: { deletedAt: new Date(), status: "INACTIVE", groupId: null, ...retireAssetKeys(id, current.tombo, current.serialNumber) },
     });
   }, GROUP_TX);
   await logChanges({
-    kind: AssetKind.COMPUTER,
+    kind: variantAssetKind(tipo),
     computadorId: id,
     actorId: session.user.id,
     changes: [{ campo: "deleted", anterior: current.tombo, novo: "inativo" }],
   });
-  refresh();
+  refresh(tipo);
   return { success: true };
 }

@@ -433,14 +433,15 @@ export function prismaGroupStore(tx: Prisma.TransactionClient): GroupStore {
     async get(ref) {
       if (ref.kind === "COMPUTER") {
         const row = await tx.computador.findUnique({ where: { id: ref.id } });
-        return row ? toMember("COMPUTER", row) : null;
+        if (!row || row.tipo === "NOTEBOOK") return null;
+        return toMember("COMPUTER", row);
       }
       const row = await tx.monitor.findUnique({ where: { id: ref.id } });
       return row ? toMember("MONITOR", row) : null;
     },
     async listGroup(groupId) {
       const [computers, monitors] = await Promise.all([
-        tx.computador.findMany({ where: { groupId, deletedAt: null } }),
+        tx.computador.findMany({ where: { groupId, deletedAt: null, tipo: "DESKTOP" } }),
         tx.monitor.findMany({ where: { groupId, deletedAt: null } }),
       ]);
       return [
@@ -532,7 +533,7 @@ export async function listGroupMembers(kind: "COMPUTER" | "MONITOR", id: string)
     : await prisma.monitor.findFirst({ where: { id, deletedAt: null }, select: { groupId: true } });
   if (!current?.groupId) return [] as GroupMember[];
   const [computers, monitors] = await Promise.all([
-    prisma.computador.findMany({ where: { groupId: current.groupId, deletedAt: null }, orderBy: { tombo: "asc" } }),
+    prisma.computador.findMany({ where: { groupId: current.groupId, deletedAt: null, tipo: "DESKTOP" }, orderBy: { tombo: "asc" } }),
     prisma.monitor.findMany({ where: { groupId: current.groupId, deletedAt: null }, orderBy: { tombo: "asc" } }),
   ]);
   return sortMembers([
@@ -558,7 +559,7 @@ export function toClientGroupMember(member: GroupMember) {
 export async function listAgrupamentoCandidates() {
   const [computers, monitors] = await Promise.all([
     prisma.computador.findMany({
-      where: { deletedAt: null },
+      where: { deletedAt: null, tipo: "DESKTOP" },
       orderBy: { tombo: "asc" },
       select: { id: true, tombo: true, usuario: true, groupId: true },
     }),
@@ -578,6 +579,7 @@ export async function revalidateGroupMembers(members: Array<AssetRef>) {
   const { revalidatePath } = await import("next/cache");
   revalidatePath("/");
   revalidatePath("/computadores");
+  revalidatePath("/notebooks");
   revalidatePath("/monitores");
   revalidatePath("/movimentacoes");
   revalidatePath("/visao-geral");
