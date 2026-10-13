@@ -5,6 +5,24 @@ Alterações pequenas, correções e ajustes mantêm a mesma versão e increment
 `X.Y.Z` muda somente quando houver mudança funcional relevante ou significativa.
 O número do Build é sequencial e não reinicia quando `X.Y.Z` avança.
 
+## 1.7.0 (Build 14)
+
+Geração de PDF das listas filtradas e Termo de Recebimento para o usuário assinar a posse do equipamento ou agrupamento.
+
+### Adicionado
+
+- Dependência `@react-pdf/renderer` para emitir PDF no cliente, sem Chromium
+- Botão Imprimir em Visão Geral, Computadores, Monitores e Notebooks, com escolha de colunas após o filtro
+- PDF de lista em A4 paisagem e margens estreitas (1,27 cm)
+- Termo de Recebimento por equipamento ou agrupamento (Visão Geral e fichas de computador, notebook e monitor)
+- Cabeçalho do termo com a marca do TCE-PA, linha separadora e título sem data sob o título
+- Dados do equipamento/agrupamento no termo (usuário, matrícula, setor só com o nome, prédio) e observação de computador/notebook
+- Marca `public/marca-tce.jpg` usada no cabeçalho do termo
+
+### Alterado
+
+- Na Visão Geral, a coluna Termo usa só o ícone, no mesmo estilo da coluna Ações
+
 ## 1.6.0 (Build 13)
 
 Notebooks entram no inventário, o perfil Usuário passa a ser só consulta e a Visão Geral ganha atalhos por setor.

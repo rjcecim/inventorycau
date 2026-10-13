@@ -13,6 +13,9 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 import { loadComputerFormOptions, toComputerFormValues } from "@/lib/asset-form";
 import { isAdminRole } from "@/lib/authz";
 import { canOperateRole } from "@/lib/roles";
+import { CustodyTermButton } from "@/components/print/CustodyTermButton";
+import { custodyItemsForGroup, singleCustodyItem } from "@/lib/custody-term";
+import { setorLabel } from "@/lib/alocacao";
 import { formatDbDate, formatCalendarDate } from "@/lib/dates";
 import { listAgrupamentoCandidates, listGroupMembers, toClientGroupMember } from "@/lib/equipamento-grupo";
 import { computeWarranty } from "@/lib/garantia";
@@ -122,6 +125,7 @@ export async function ComputerDetailView({
       include: {
         departamento: true,
         localizacao: true,
+        servidor: true,
         movimentacoes: { orderBy: { createdDate: "desc" }, include: { actor: true, computador: true, monitor: true } },
       },
     }),
@@ -129,6 +133,10 @@ export async function ComputerDetailView({
     variant === "DESKTOP" ? listAgrupamentoCandidates() : Promise.resolve([]),
   ]);
   if (!computer) notFound();
+  const custodyItems = await custodyItemsForGroup(
+    members,
+    singleCustodyItem(copy.singular, computer),
+  );
   const warranty = computeWarranty({
     dataRecebimento: computer.dataRecebimento,
     prazoGarantiaAnos: computer.prazoGarantiaAnos,
@@ -153,12 +161,21 @@ export async function ComputerDetailView({
             <span>{formatPredio(computer.localizacao) || "Sem prédio"}</span>
           </div>
         </div>
-        <ComputerDetailActions
-          computerId={computer.id}
-          isAdmin={isAdminRole(session?.user?.role)}
-          canOperate={canOperateRole(session?.user?.role)}
-          variant={variant}
-        />
+        <div className="flex flex-wrap items-center gap-2">
+          <CustodyTermButton
+            usuario={computer.servidor?.nome || computer.usuario || ""}
+            matricula={computer.servidor?.matricula || ""}
+            setor={setorLabel(computer.departamento)}
+            predio={formatPredio(computer.localizacao)}
+            items={custodyItems}
+          />
+          <ComputerDetailActions
+            computerId={computer.id}
+            isAdmin={isAdminRole(session?.user?.role)}
+            canOperate={canOperateRole(session?.user?.role)}
+            variant={variant}
+          />
+        </div>
       </div>
 
       <section className="surface p-5">

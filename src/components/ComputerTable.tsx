@@ -14,6 +14,8 @@ import { statusLabel } from "@/lib/status";
 import { formatPredio } from "@/lib/predios";
 import { setorLabel } from "@/lib/alocacao";
 import { variantCopy, type ComputerVariant } from "@/lib/inventory-kind";
+import { PrintListButton } from "@/components/print/PrintListButton";
+import type { PdfColumn } from "@/components/print/InventoryPdf";
 
 type Row = {
   id: string;
@@ -53,6 +55,14 @@ const DESKTOP_COLUMNS: Array<[Col, string, "left" | "right"]> = [
 ];
 
 const NOTEBOOK_COLUMNS = DESKTOP_COLUMNS.filter(([col]) => col !== "agrupados");
+const PRINT_COLUMNS: PdfColumn[] = DESKTOP_COLUMNS
+  .filter(([col]) => col !== "agrupados")
+  .map(([id, label]) => ({ id, label }));
+
+function dash(value?: string | null) {
+  const text = value?.trim();
+  return text && text !== EMPTY_FILTER ? text : "—";
+}
 
 export function ComputerTable({
   computers,
@@ -74,6 +84,21 @@ export function ComputerTable({
   return (
     <>
       <div className="mb-4 flex flex-wrap items-center justify-end gap-3">
+        <PrintListButton
+          title={copy.title}
+          filename={`${copy.basePath.slice(1)}.pdf`}
+          columns={PRINT_COLUMNS}
+          disabled={!filtered.length}
+          rows={filtered.map((row) => ({
+            tombo: dash(row.tombo),
+            modelo: dash(row.modelo),
+            serial: dash(row.serialNumber),
+            usuario: dash(row.usuario),
+            setor: dash(setorLabel(row.departamento)),
+            predio: dash(formatPredio(row.localizacao)),
+            status: statusLabel(row.status),
+          }))}
+        />
         {hasFilter ? (
           <Button variant="ghost" type="button" onClick={clear}>
             Limpar filtros

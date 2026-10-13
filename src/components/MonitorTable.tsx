@@ -13,6 +13,8 @@ import { EMPTY_FILTER, useExcelFilters } from "@/components/ui/useExcelFilters";
 import { statusLabel } from "@/lib/status";
 import { monitorAlocacao, setorLabel } from "@/lib/alocacao";
 import { formatPredio } from "@/lib/predios";
+import { PrintListButton } from "@/components/print/PrintListButton";
+import type { PdfColumn } from "@/components/print/InventoryPdf";
 
 type Loc = { id?: string; nome: string; cidade?: string | null; uf?: string | null };
 
@@ -50,6 +52,22 @@ function cell(row: Row, col: Col) {
   return statusLabel(alocacao.status);
 }
 
+function dash(value?: string | null) {
+  const text = value?.trim();
+  return text && text !== EMPTY_FILTER ? text : "—";
+}
+
+const PRINT_COLUMNS: PdfColumn[] = [
+  { id: "tombo", label: "Patrimônio" },
+  { id: "modelo", label: "Modelo" },
+  { id: "serial", label: "S/N" },
+  { id: "computador", label: "Computador" },
+  { id: "usuario", label: "Usuário" },
+  { id: "setor", label: "Setor" },
+  { id: "predio", label: "Prédio" },
+  { id: "status", label: "Status" },
+];
+
 const COLUMNS: Array<[Col, string, "left" | "right"]> = [
   ["tombo", "Patrimônio", "left"],
   ["modelo", "Modelo", "left"],
@@ -77,6 +95,25 @@ export function MonitorTable({
   return (
     <>
       <div className="mb-4 flex flex-wrap items-center justify-end gap-3">
+        <PrintListButton
+          title="Monitores"
+          filename="monitores.pdf"
+          columns={PRINT_COLUMNS}
+          disabled={!filtered.length}
+          rows={filtered.map((row) => {
+            const alocacao = monitorAlocacao(row);
+            return {
+              tombo: dash(row.tombo),
+              modelo: dash(row.modelo),
+              serial: dash(row.serialNumber),
+              computador: dash(row.computador?.tombo),
+              usuario: dash(alocacao.usuario),
+              setor: dash(setorLabel(alocacao.departamento)),
+              predio: dash(formatPredio(alocacao.localizacao)),
+              status: statusLabel(alocacao.status),
+            };
+          })}
+        />
         {hasFilter ? (
           <Button variant="ghost" type="button" onClick={clear}>
             Limpar filtros

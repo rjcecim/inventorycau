@@ -9,8 +9,17 @@ import { ExcelFilter } from "@/components/ui/ExcelFilter";
 import { Button } from "@/components/ui/Button";
 import { statusLabel } from "@/lib/status";
 import { cn } from "@/lib/utils";
+import { CustodyTermButton } from "@/components/print/CustodyTermButton";
+import { PrintListButton } from "@/components/print/PrintListButton";
+import type { PdfCell, PdfColumn } from "@/components/print/InventoryPdf";
 
-type AssetRef = { id: string; tombo: string; modelo: string; serialNumber?: string | null };
+type AssetRef = {
+  id: string;
+  tombo: string;
+  modelo: string;
+  serialNumber?: string | null;
+  observacoes?: string | null;
+};
 
 type Row = {
   id: string;
@@ -22,6 +31,7 @@ type Row = {
   modeloComputador: string;
   status: AssetStatus;
   usuario: string;
+  matricula?: string;
   computadores?: AssetRef[];
   monitores: AssetRef[];
 };
@@ -88,6 +98,27 @@ function visibleMonitors(row: Row, filters: Partial<Record<Col, string[]>>) {
     list = list.filter((item) => modeloFilter.includes(monitorModelo(item)));
   }
   return list;
+}
+
+const VISAO_PRINT_COLUMNS: PdfColumn[] = [
+  { id: "setor", label: "Setor" },
+  { id: "predio", label: "Prédio" },
+  { id: "computador", label: "Tombo PC" },
+  { id: "modeloComputador", label: "Modelo PC" },
+  { id: "monitores", label: "Tombo Monitor" },
+  { id: "modeloMonitor", label: "Modelo Monitor" },
+  { id: "usuario", label: "Usuário" },
+  { id: "status", label: "Status" },
+];
+
+function assetLines(items: AssetRef[], showSerial: boolean): PdfCell {
+  if (!items.length) return "—";
+  return {
+    lines: items.map((item) => ({
+      text: item.tombo,
+      note: showSerial ? (item.serialNumber?.trim() || "—") : undefined,
+    })),
+  };
 }
 
 function PatrimonioLink({ href, label, modelo }: { href: string; label: string; modelo: string }) {
@@ -181,6 +212,26 @@ export function VisaoGeralTable({ rows, initialSetor = "" }: { rows: Row[]; init
           </span>
           Mostrar S/N
         </button>
+        <PrintListButton
+          title="Visão Geral"
+          filename="visao-geral.pdf"
+          columns={VISAO_PRINT_COLUMNS}
+          disabled={!filtered.length}
+          rows={filtered.map((row) => {
+            const shown = visibleMonitors(row, filters);
+            const modelos = [...new Set(shown.map(monitorModelo).filter((item) => item !== EMPTY))];
+            return {
+              setor: row.setor || "—",
+              predio: row.predio || "—",
+              computador: assetLines(row.computadores ?? [], showSerial),
+              modeloComputador: row.modeloComputador || "—",
+              monitores: assetLines(shown, showSerial),
+              modeloMonitor: modelos.join(", ") || "—",
+              usuario: row.usuario || "—",
+              status: statusLabel(row.status),
+            };
+          })}
+        />
         {hasFilter ? (
           <Button
             type="button"
@@ -218,6 +269,11 @@ export function VisaoGeralTable({ rows, initialSetor = "" }: { rows: Row[]; init
                   />
                 </th>
               ))}
+              <th className="px-3 py-2 text-right">
+                <span className="inline-flex items-center whitespace-nowrap rounded-md px-1 py-0.5 text-[11px] font-semibold text-slate-500">
+                  Termo
+                </span>
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -275,6 +331,30 @@ export function VisaoGeralTable({ rows, initialSetor = "" }: { rows: Row[]; init
                   <td className="px-4 py-3 text-slate-600">{modelos.join(", ") || "—"}</td>
                   <td className="px-4 py-3 text-slate-600">{row.usuario || "—"}</td>
                   <td className="px-4 py-3"><StatusBadge status={row.status} /></td>
+                  <td className="px-4 py-3 text-right">
+                    <CustodyTermButton
+                      compact
+                      usuario={row.usuario}
+                      matricula={row.matricula}
+                      setor={row.setor}
+                      predio={row.predio}
+                      items={[
+                        ...(row.computadores ?? []).map((item) => ({
+                          tipo: "Computador",
+                          tombo: item.tombo,
+                          modelo: item.modelo || "—",
+                          serialNumber: item.serialNumber?.trim() || "—",
+                          observacoes: item.observacoes?.trim() || "",
+                        })),
+                        ...shown.map((item) => ({
+                          tipo: "Monitor",
+                          tombo: item.tombo,
+                          modelo: item.modelo || "—",
+                          serialNumber: item.serialNumber?.trim() || "—",
+                        })),
+                      ]}
+                    />
+                  </td>
                 </tr>
               );
             })}

@@ -68,7 +68,14 @@ export default async function VisaoGeralPage({
       modeloComputador: group.computers.map(assetModelo).filter(Boolean).join(", "),
       status: lead.status,
       usuario: usuarioLabel(lead),
-      computadores: group.computers.map((item) => ({ id: item.id, tombo: item.tombo, modelo: assetModelo(item), serialNumber: item.serialNumber })),
+      matricula: lead.servidor?.matricula || "",
+      computadores: group.computers.map((item) => ({
+        id: item.id,
+        tombo: item.tombo,
+        modelo: assetModelo(item),
+        serialNumber: item.serialNumber,
+        observacoes: item.observacoes,
+      })),
       monitores: group.monitors.map((item) => ({ id: item.id, tombo: item.tombo, modelo: assetModelo(item), serialNumber: item.serialNumber })),
     };
   });
@@ -83,7 +90,14 @@ export default async function VisaoGeralPage({
     modeloComputador: assetModelo(item),
     status: item.status,
     usuario: usuarioLabel(item),
-    computadores: [{ id: item.id, tombo: item.tombo, modelo: assetModelo(item), serialNumber: item.serialNumber }],
+    matricula: item.servidor?.matricula || "",
+    computadores: [{
+      id: item.id,
+      tombo: item.tombo,
+      modelo: assetModelo(item),
+      serialNumber: item.serialNumber,
+      observacoes: item.observacoes,
+    }],
     monitores: [],
   }));
 
@@ -97,6 +111,7 @@ export default async function VisaoGeralPage({
     modeloComputador: "",
     status: item.status,
     usuario: usuarioLabel(item),
+    matricula: item.servidor?.matricula || "",
     computadores: [],
     monitores: [{ id: item.id, tombo: item.tombo, modelo: assetModelo(item), serialNumber: item.serialNumber }],
   }));

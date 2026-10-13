@@ -14,6 +14,8 @@ import { listAgrupamentoCandidates, listGroupMembers, toClientGroupMember } from
 import { computeWarranty } from "@/lib/garantia";
 import { computeModernization } from "@/lib/modernizacao";
 import { formatCalendarDate, formatDbDate } from "@/lib/dates";
+import { CustodyTermButton } from "@/components/print/CustodyTermButton";
+import { custodyItemsForGroup, singleCustodyItem } from "@/lib/custody-term";
 
 export const dynamic = "force-dynamic";
 
@@ -35,6 +37,7 @@ export default async function MonitorDetailPage({ params }: { params: Promise<{ 
       include: {
         departamento: true,
         localizacao: true,
+        servidor: true,
         movimentacoes: { orderBy: { createdDate: "desc" }, include: { actor: true, computador: true, monitor: true } },
       },
     }),
@@ -42,6 +45,10 @@ export default async function MonitorDetailPage({ params }: { params: Promise<{ 
     listAgrupamentoCandidates(),
   ]);
   if (!monitor) notFound();
+  const custodyItems = await custodyItemsForGroup(
+    members,
+    singleCustodyItem("Monitor", monitor),
+  );
   const warranty = computeWarranty({
     dataRecebimento: monitor.dataRecebimento,
     prazoGarantiaAnos: monitor.prazoGarantiaAnos,
@@ -64,11 +71,20 @@ export default async function MonitorDetailPage({ params }: { params: Promise<{ 
             <span>{monitor.modelo || "Modelo não informado"}</span>
           </div>
         </div>
-        <MonitorDetailActions
-          monitorId={monitor.id}
-          isAdmin={isAdminRole(session?.user?.role)}
-          canOperate={canOperateRole(session?.user?.role)}
-        />
+        <div className="flex flex-wrap items-center gap-2">
+          <CustodyTermButton
+            usuario={monitor.servidor?.nome || monitor.usuario || ""}
+            matricula={monitor.servidor?.matricula || ""}
+            setor={setorLabel(monitor.departamento)}
+            predio={formatPredio(monitor.localizacao)}
+            items={custodyItems}
+          />
+          <MonitorDetailActions
+            monitorId={monitor.id}
+            isAdmin={isAdminRole(session?.user?.role)}
+            canOperate={canOperateRole(session?.user?.role)}
+          />
+        </div>
       </div>
 
       <section className="surface p-5">
